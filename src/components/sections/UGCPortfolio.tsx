@@ -45,7 +45,7 @@ const cards = [
 function Card({ card, compact }: { card: (typeof cards)[number]; compact: boolean }) {
   const pillColor = categoryColors[card.type] || "bg-terracotta";
   const sizeClasses = compact
-    ? "h-[300px] w-[220px]"
+    ? "h-[280px] w-[200px]"
     : "h-[380px] w-[280px]";
 
   return (
@@ -55,14 +55,26 @@ function Card({ card, compact }: { card: (typeof cards)[number]; compact: boolea
       rel="noopener noreferrer"
       className={`group relative ${sizeClasses} flex-shrink-0 cursor-pointer overflow-hidden rounded-xl bg-text/5 transition-all duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:z-10 hover:scale-[1.08] hover:shadow-[0_20px_60px_rgba(0,0,0,0.2)]`}
     >
-      <Image
-        src={card.thumbnail}
-        alt={card.brand}
-        fill
-        className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-        sizes={compact ? "220px" : "280px"}
-        quality={compact ? 55 : 75}
-      />
+      {compact ? (
+        // Native img on mobile — no Next.js Image overhead, browser handles lazy loading
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={card.thumbnail}
+          alt={card.brand}
+          loading="lazy"
+          decoding="async"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      ) : (
+        <Image
+          src={card.thumbnail}
+          alt={card.brand}
+          fill
+          className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+          sizes="280px"
+          quality={75}
+        />
+      )}
 
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/30 text-white/80 transition-all duration-300 group-hover:bg-black/50 group-hover:text-white">
@@ -84,20 +96,55 @@ function Card({ card, compact }: { card: (typeof cards)[number]; compact: boolea
   );
 }
 
+function DesktopCarousel() {
+  const allCards = [...cards, ...cards];
+
+  return (
+    <div
+      className="relative overflow-x-clip overflow-y-visible"
+      style={{
+        maskImage: "linear-gradient(to right, transparent, black 5%, black 95%, transparent)",
+        WebkitMaskImage: "linear-gradient(to right, transparent, black 5%, black 95%, transparent)",
+      }}
+    >
+      <div
+        className="group flex w-max items-center gap-5 py-8 pl-5 hover:[animation-play-state:paused]"
+        style={{ animation: "marquee 80s linear infinite" }}
+      >
+        {allCards.map((card, i) => (
+          <Card key={i} card={card} compact={false} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MobileCarousel() {
+  const mobileCards = cards.slice(0, 8);
+
+  return (
+    <div className="scrollbar-hide -mx-1 overflow-x-auto px-5">
+      <div className="flex w-max items-center gap-4 py-4">
+        {mobileCards.map((card, i) => (
+          <Card key={i} card={card} compact />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function UGCPortfolio() {
   const [isMobile, setIsMobile] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 768px)");
     setIsMobile(mq.matches);
+    setMounted(true);
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
   }, []);
-
-  const visibleCards = isMobile ? cards.slice(0, 10) : cards;
-  const allCards = [...visibleCards, ...visibleCards];
-  const animDuration = isMobile ? "40s" : "80s";
 
   return (
     <section id="ugc" className="bg-bg pt-24 pb-12 md:pt-28 md:pb-14">
@@ -110,21 +157,13 @@ export default function UGCPortfolio() {
       </Container>
 
       <ScrollReveal delay={0.15}>
-        <div
-          className="relative mt-16 overflow-x-clip overflow-y-visible"
-          style={{
-            maskImage: "linear-gradient(to right, transparent, black 5%, black 95%, transparent)",
-            WebkitMaskImage: "linear-gradient(to right, transparent, black 5%, black 95%, transparent)",
-          }}
-        >
-          <div
-            className="group flex w-max items-center gap-5 py-8 pl-5 hover:[animation-play-state:paused]"
-            style={{ animation: `marquee ${animDuration} linear infinite` }}
-          >
-            {allCards.map((card, i) => (
-              <Card key={i} card={card} compact={isMobile} />
-            ))}
-          </div>
+        <div className="mt-16">
+          {mounted ? (
+            isMobile ? <MobileCarousel /> : <DesktopCarousel />
+          ) : (
+            // SSR placeholder — renders nothing costly
+            <div className="h-[320px]" />
+          )}
         </div>
       </ScrollReveal>
 
