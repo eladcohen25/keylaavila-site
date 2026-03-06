@@ -4,6 +4,7 @@ import Image from "next/image";
 import Container from "@/components/ui/Container";
 import SectionHeading from "@/components/ui/SectionHeading";
 import ScrollReveal from "@/components/ui/ScrollReveal";
+import { useIsMobile } from "@/lib/MobileProvider";
 
 const stats = [
   { value: "15K+", label: "Followers" },
@@ -23,18 +24,26 @@ const logos = [
   { src: "/Logo Scroll/noa logo.PNG", alt: "Noa" },
 ];
 
+const marqueeLogos = [...logos, ...logos, ...logos, ...logos];
+
 export default function BrandLogos() {
+  const isMobile = useIsMobile();
+
+  // Mobile: hidden entirely to prevent crash
+  if (isMobile !== false) {
+    return <section className="relative bg-bg-alt" />;
+  }
+
+  // Desktop: full section with scrolling marquee
   return (
-    <section className="relative bg-bg-alt pt-14 pb-24 md:pt-16 md:pb-28">
-      {/* MOBILE: entire section hidden for crash debugging — remove "hidden md:block" to re-enable */}
-      <div className="hidden md:block">
+    <section className="relative bg-bg-alt pt-16 pb-28">
       <Container className="relative z-10">
         <SectionHeading title="Trusted By" />
 
         <ScrollReveal delay={0.1}>
-          <div className="mx-auto mt-14 flex max-w-3xl flex-wrap items-center justify-center gap-x-8 gap-y-4 md:gap-x-12">
+          <div className="mx-auto mt-14 flex max-w-3xl flex-wrap items-center justify-center gap-x-12 gap-y-4">
             {stats.map((stat, i) => (
-              <div key={stat.label} className="flex items-center gap-x-8 md:gap-x-12">
+              <div key={stat.label} className="flex items-center gap-x-12">
                 <div className="text-center">
                   <span className="block font-serif text-[32px] font-light leading-none text-text">
                     {stat.value}
@@ -44,7 +53,7 @@ export default function BrandLogos() {
                   </span>
                 </div>
                 {i < stats.length - 1 && (
-                  <span className="hidden h-1 w-1 rounded-full bg-terracotta md:block" />
+                  <span className="h-1 w-1 rounded-full bg-terracotta" />
                 )}
               </div>
             ))}
@@ -52,25 +61,36 @@ export default function BrandLogos() {
         </ScrollReveal>
       </Container>
 
-      {/* Static logo grid — no marquee, no animation */}
+      {/* Scrolling logo marquee */}
       <ScrollReveal delay={0.2}>
-        <div className="mx-auto mt-12 flex max-w-4xl flex-wrap items-center justify-center gap-8 px-6 md:mt-16 md:gap-12">
-          {logos.map((logo) => (
-            <div
-              key={logo.alt}
-              className="flex items-center justify-center opacity-50 grayscale transition-all duration-300 hover:opacity-100 hover:grayscale-0"
-            >
-              <Image
-                src={logo.src}
-                alt={logo.alt}
-                width={120}
-                height={44}
-                className="h-8 w-auto max-w-[100px] object-contain md:h-12 md:max-w-[140px]"
-                style={{ height: "auto", width: "auto", maxHeight: 48 }}
-                quality={50}
-              />
-            </div>
-          ))}
+        <div
+          className="relative mt-16 overflow-hidden"
+          style={{
+            maskImage: "linear-gradient(to right, transparent, black 8%, black 92%, transparent)",
+            WebkitMaskImage: "linear-gradient(to right, transparent, black 8%, black 92%, transparent)",
+          }}
+        >
+          <div
+            className="flex w-max items-center gap-16 hover:[animation-play-state:paused]"
+            style={{ animation: "marquee 60s linear infinite" }}
+          >
+            {marqueeLogos.map((logo, i) => (
+              <div
+                key={`${logo.alt}-${i}`}
+                className="flex flex-shrink-0 items-center justify-center opacity-50 grayscale transition-all duration-300 hover:opacity-100 hover:grayscale-0"
+              >
+                <Image
+                  src={logo.src}
+                  alt={logo.alt}
+                  width={120}
+                  height={44}
+                  className="h-12 w-auto max-w-[140px] object-contain"
+                  style={{ height: "auto", width: "auto", maxHeight: 48 }}
+                  quality={50}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       </ScrollReveal>
 
@@ -81,7 +101,6 @@ export default function BrandLogos() {
           </p>
         </ScrollReveal>
       </Container>
-      </div>
     </section>
   );
 }

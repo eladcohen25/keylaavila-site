@@ -55,12 +55,15 @@ const cards = [
 export default function UGCPortfolio() {
   const isMobile = useIsMobile();
   const desktopCards = [...cards, ...cards];
-  const mobileCards = cards.slice(0, 6);
 
+  // Mobile: hidden entirely to prevent crash
+  if (isMobile !== false) {
+    return <section id="ugc" className="bg-bg" />;
+  }
+
+  // Desktop: full image marquee carousel
   return (
-    <section id="ugc" className="bg-bg pt-24 pb-12 md:pt-28 md:pb-14">
-      {/* MOBILE: entire section hidden for crash debugging — re-enable by removing "hidden md:block" wrapper */}
-      <div className="hidden md:block">
+    <section id="ugc" className="bg-bg pt-28 pb-14">
       <Container>
         <SectionHeading
           label="UGC & Content"
@@ -68,114 +71,70 @@ export default function UGCPortfolio() {
           subtitle="Real content for real audiences — built on expertise, not just aesthetics."
         />
       </Container>
-      </div>
 
-      {/*
-        MOBILE: hidden for crash debugging
-      */}
-      <div className="mt-10 px-5 hidden">
-        <div className="grid grid-cols-2 gap-3">
-          {mobileCards.map((card, i) => (
-            <a
-              key={i}
-              href={card.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`flex h-[140px] flex-col justify-end rounded-xl bg-gradient-to-br ${gradientColors[card.type] || "from-[#C4714A] to-[#a85d3b]"} p-4`}
-            >
-              <div className="flex items-center gap-1.5">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" className="text-white/70">
-                  <polygon points="6 3 20 12 6 21 6 3" />
-                </svg>
-                <span className="font-sans text-[8px] font-medium uppercase tracking-[0.1em] text-white/60">
-                  {card.type}
-                </span>
-              </div>
-              <p className="mt-1.5 font-sans text-[13px] font-medium leading-snug text-white/95">
-                {card.brand}
-              </p>
-            </a>
-          ))}
-        </div>
-        <p className="mt-6 text-center font-sans text-sm font-light text-text-muted">
-          More content available —{" "}
-          <a href="#booking" className="font-medium text-terracotta">
-            Get in Touch →
-          </a>
-        </p>
-      </div>
-
-      {/*
-        DESKTOP: full image marquee carousel with hover effects.
-        Only rendered when confirmed desktop to prevent 46 Image components on mobile.
-      */}
-      {isMobile === false && (
-        <div className="hidden md:block">
-          <ScrollReveal delay={0.15}>
-            <div
-              className="relative mt-16 overflow-x-clip overflow-y-visible"
-              style={{
-                maskImage: "linear-gradient(to right, transparent, black 5%, black 95%, transparent)",
-                WebkitMaskImage: "linear-gradient(to right, transparent, black 5%, black 95%, transparent)",
-              }}
-            >
-              <div
-                className="group flex w-max items-center gap-5 py-8 pl-5 hover:[animation-play-state:paused]"
-                style={{ animation: "marquee 80s linear infinite" }}
-              >
-                {desktopCards.map((card, i) => {
-                  const pillColor = categoryColors[card.type] || "bg-terracotta";
-                  return (
-                    <a
-                      key={i}
-                      href={card.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group/card relative h-[380px] w-[280px] flex-shrink-0 cursor-pointer overflow-hidden rounded-xl bg-text/5 transition-all duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:z-10 hover:scale-[1.08] hover:shadow-[0_20px_60px_rgba(0,0,0,0.2)]"
-                    >
-                      <Image
-                        src={card.thumbnail}
-                        alt={card.brand}
-                        fill
-                        className="object-cover transition-transform duration-500 ease-out group-hover/card:scale-105"
-                        sizes="280px"
-                        quality={75}
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/30 text-white/80 transition-all duration-300 group-hover/card:bg-black/50 group-hover/card:text-white">
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                            <polygon points="6 3 20 12 6 21 6 3" />
-                          </svg>
-                        </div>
-                      </div>
-                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-5 pt-20">
-                        <span className={`mb-2 inline-block rounded-full ${pillColor} px-3 py-1 font-sans text-[9px] font-medium uppercase tracking-[0.12em] text-bg`}>
-                          {card.type}
-                        </span>
-                        <p className="font-sans text-sm font-medium text-white/90">{card.brand}</p>
-                      </div>
-                    </a>
-                  );
-                })}
-              </div>
-            </div>
-          </ScrollReveal>
-
-          <Container>
-            <ScrollReveal delay={0.25}>
-              <p className="mt-10 text-center font-sans text-sm font-light text-text-muted">
-                More content available upon request —{" "}
+      <ScrollReveal delay={0.15}>
+        <div
+          className="relative mt-16 overflow-x-clip overflow-y-visible"
+          style={{
+            maskImage: "linear-gradient(to right, transparent, black 5%, black 95%, transparent)",
+            WebkitMaskImage: "linear-gradient(to right, transparent, black 5%, black 95%, transparent)",
+          }}
+        >
+          <div
+            className="group flex w-max items-center gap-5 py-8 pl-5 hover:[animation-play-state:paused]"
+            style={{ animation: "marquee 80s linear infinite" }}
+          >
+            {desktopCards.map((card, i) => {
+              const pillColor = categoryColors[card.type] || "bg-terracotta";
+              return (
                 <a
-                  href="#booking"
-                  className="animated-underline font-medium text-terracotta transition-colors hover:text-burgundy"
+                  key={i}
+                  href={card.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group/card relative h-[380px] w-[280px] flex-shrink-0 cursor-pointer overflow-hidden rounded-xl bg-text/5 transition-all duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:z-10 hover:scale-[1.08] hover:shadow-[0_20px_60px_rgba(0,0,0,0.2)]"
                 >
-                  Get in Touch →
+                  <Image
+                    src={card.thumbnail}
+                    alt={card.brand}
+                    fill
+                    className="object-cover transition-transform duration-500 ease-out group-hover/card:scale-105"
+                    sizes="280px"
+                    quality={75}
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/30 text-white/80 transition-all duration-300 group-hover/card:bg-black/50 group-hover/card:text-white">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                        <polygon points="6 3 20 12 6 21 6 3" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-5 pt-20">
+                    <span className={`mb-2 inline-block rounded-full ${pillColor} px-3 py-1 font-sans text-[9px] font-medium uppercase tracking-[0.12em] text-bg`}>
+                      {card.type}
+                    </span>
+                    <p className="font-sans text-sm font-medium text-white/90">{card.brand}</p>
+                  </div>
                 </a>
-              </p>
-            </ScrollReveal>
-          </Container>
+              );
+            })}
+          </div>
         </div>
-      )}
+      </ScrollReveal>
+
+      <Container>
+        <ScrollReveal delay={0.25}>
+          <p className="mt-10 text-center font-sans text-sm font-light text-text-muted">
+            More content available upon request —{" "}
+            <a
+              href="#booking"
+              className="animated-underline font-medium text-terracotta transition-colors hover:text-burgundy"
+            >
+              Get in Touch →
+            </a>
+          </p>
+        </ScrollReveal>
+      </Container>
     </section>
   );
 }
