@@ -14,7 +14,7 @@ const galleryItems = [
   { id: 4, src: "/images/lifestyle/pilates-prep.jpg", alt: "Pilates studio warmup", aspect: "aspect-[4/5]" },
   { id: 5, src: "/images/fitness/gym-portrait.jpg", alt: "Gym portrait", aspect: "aspect-[3/4]" },
   { id: 6, src: "/images/lifestyle/night-editorial.jpg", alt: "Night editorial shoot", aspect: "aspect-[3/4]" },
-  { id: 7, src: "/images/fitness/cable-training.png", alt: "Cable training", aspect: "aspect-[3/4]" },
+  { id: 7, src: "/images/fitness/cable-training.jpg", alt: "Cable training", aspect: "aspect-[3/4]" },
   { id: 8, src: "/images/lifestyle/editorial-seated.jpg", alt: "Editorial seated portrait", aspect: "aspect-[3/4]" },
   { id: 9, src: "/images/pilates/pilates-studio.jpg", alt: "Rooftop movement", aspect: "aspect-[1/1]" },
   { id: 10, src: "/images/fitness/puma-event.jpg", alt: "Puma fitness event", aspect: "aspect-[3/4]" },

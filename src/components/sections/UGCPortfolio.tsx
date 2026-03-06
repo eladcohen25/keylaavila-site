@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Container from "@/components/ui/Container";
 import SectionHeading from "@/components/ui/SectionHeading";
@@ -44,9 +44,7 @@ const cards = [
 
 function Card({ card, compact }: { card: (typeof cards)[number]; compact: boolean }) {
   const pillColor = categoryColors[card.type] || "bg-terracotta";
-  const sizeClasses = compact
-    ? "h-[280px] w-[200px]"
-    : "h-[380px] w-[280px]";
+  const sizeClasses = compact ? "h-[280px] w-[200px]" : "h-[380px] w-[280px]";
 
   return (
     <a
@@ -55,26 +53,14 @@ function Card({ card, compact }: { card: (typeof cards)[number]; compact: boolea
       rel="noopener noreferrer"
       className={`group relative ${sizeClasses} flex-shrink-0 cursor-pointer overflow-hidden rounded-xl bg-text/5 transition-all duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:z-10 hover:scale-[1.08] hover:shadow-[0_20px_60px_rgba(0,0,0,0.2)]`}
     >
-      {compact ? (
-        // Native img on mobile — no Next.js Image overhead, browser handles lazy loading
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={card.thumbnail}
-          alt={card.brand}
-          loading="lazy"
-          decoding="async"
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-      ) : (
-        <Image
-          src={card.thumbnail}
-          alt={card.brand}
-          fill
-          className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-          sizes="280px"
-          quality={75}
-        />
-      )}
+      <Image
+        src={card.thumbnail}
+        alt={card.brand}
+        fill
+        className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+        sizes={compact ? "200px" : "280px"}
+        quality={compact ? 40 : 75}
+      />
 
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/30 text-white/80 transition-all duration-300 group-hover:bg-black/50 group-hover:text-white">
@@ -123,7 +109,7 @@ function MobileCarousel() {
   const mobileCards = cards.slice(0, 8);
 
   return (
-    <div className="scrollbar-hide -mx-1 overflow-x-auto px-5">
+    <div className="scrollbar-hide overflow-x-auto px-5">
       <div className="flex w-max items-center gap-4 py-4">
         {mobileCards.map((card, i) => (
           <Card key={i} card={card} compact />
@@ -135,15 +121,34 @@ function MobileCarousel() {
 
 export default function UGCPortfolio() {
   const [isMobile, setIsMobile] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [shouldRender, setShouldRender] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 768px)");
     setIsMobile(mq.matches);
-    setMounted(true);
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  // Only mount the carousel when the section is near the viewport
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShouldRender(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
   return (
@@ -156,16 +161,15 @@ export default function UGCPortfolio() {
         />
       </Container>
 
-      <ScrollReveal delay={0.15}>
-        <div className="mt-16">
-          {mounted ? (
-            isMobile ? <MobileCarousel /> : <DesktopCarousel />
-          ) : (
-            // SSR placeholder — renders nothing costly
-            <div className="h-[320px]" />
-          )}
-        </div>
-      </ScrollReveal>
+      <div ref={sentinelRef} className="mt-16">
+        {shouldRender ? (
+          <ScrollReveal>
+            {isMobile ? <MobileCarousel /> : <DesktopCarousel />}
+          </ScrollReveal>
+        ) : (
+          <div className="h-[320px]" />
+        )}
+      </div>
 
       <Container>
         <ScrollReveal delay={0.25}>

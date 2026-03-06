@@ -77,7 +77,7 @@ const fallbackImages = [
   { src: "/images/lifestyle/pilates-prep.jpg", alt: "Studio warmup", type: "IMAGE" as const },
   { src: "/images/fitness/puma-event.jpg", alt: "Puma event", type: "IMAGE" as const },
   { src: "/images/lifestyle/lifestyle-2.jpg", alt: "Lifestyle", type: "IMAGE" as const },
-  { src: "/images/fitness/cable-training.png", alt: "Training", type: "IMAGE" as const },
+  { src: "/images/fitness/cable-training.jpg", alt: "Training", type: "IMAGE" as const },
   { src: "/images/lifestyle/night-editorial.jpg", alt: "Night editorial", type: "IMAGE" as const },
   { src: "/images/fitness/barbell-training.jpg", alt: "Barbell training", type: "IMAGE" as const },
 ];
