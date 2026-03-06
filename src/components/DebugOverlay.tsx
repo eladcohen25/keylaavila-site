@@ -43,7 +43,7 @@ export default function DebugOverlay() {
       }
 
       // Compositing layer hints
-      const blurEls = document.querySelectorAll("[class*=backdrop-blur],[class*=blur]").length;
+      const blurEls = document.querySelectorAll("[class*='backdrop-blur']").length;
       const fixedEls = document.querySelectorAll("[class*=fixed]").length;
       if (blurEls > 0 || fixedEls > 0) {
         console.log(`[DEBUG] GPU hints: blur=${blurEls} fixed=${fixedEls}`);

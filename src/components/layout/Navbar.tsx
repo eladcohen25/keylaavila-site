@@ -93,11 +93,10 @@ function NavbarMobile() {
         </Container>
       </header>
 
-      {/* Mobile menu overlay — CSS transition */}
+      {/* Mobile menu overlay — only mount when open to avoid persistent GPU layer */}
+      {mobileOpen && (
       <div
-        className={`fixed inset-0 z-40 flex flex-col items-center justify-center bg-bg transition-all duration-300 ${
-          mobileOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
-        }`}
+        className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-bg"
       >
         <nav className="flex flex-col items-center gap-8">
           {navLinks.map((link) => (
@@ -135,6 +134,7 @@ function NavbarMobile() {
           </a>
         </nav>
       </div>
+      )}
     </>
   );
 }

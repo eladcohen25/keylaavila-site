@@ -103,7 +103,10 @@ export default function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const mobile = isMobile !== false;
 
-  const FAQItem = mobile ? FAQItemMobile : FAQItemDesktop;
+  // Mobile: hidden for crash debugging — re-enable by removing this guard
+  if (mobile) {
+    return <section id="faq" className="bg-bg" />;
+  }
 
   return (
     <section id="faq" className="bg-bg py-24 md:py-28">
@@ -117,7 +120,7 @@ export default function FAQ() {
           <div className="mt-16">
             {faqs.map((faq, i) => (
               <ScrollReveal key={i} delay={i * 0.05}>
-                <FAQItem
+                <FAQItemDesktop
                   question={faq.question} answer={faq.answer}
                   isOpen={openIndex === i} onToggle={() => setOpenIndex(openIndex === i ? null : i)}
                 />
