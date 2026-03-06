@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Container from "@/components/ui/Container";
 import SectionHeading from "@/components/ui/SectionHeading";
@@ -42,26 +42,59 @@ const cards = [
   { type: "BRAND COLLAB", brand: "Jobee Swim", href: "https://www.tiktok.com/@keylanavilaa/video/7393854410738355502", thumbnail: "/images/ugc/jobee-swim.jpg" },
 ];
 
-function Card({ card, compact }: { card: (typeof cards)[number]; compact: boolean }) {
+function MobileCard({ card }: { card: (typeof cards)[number] }) {
   const pillColor = categoryColors[card.type] || "bg-terracotta";
-  const sizeClasses = compact ? "h-[280px] w-[200px]" : "h-[380px] w-[280px]";
 
   return (
     <a
       href={card.href}
       target="_blank"
       rel="noopener noreferrer"
-      className={`group relative ${sizeClasses} flex-shrink-0 cursor-pointer overflow-hidden rounded-xl bg-text/5 transition-all duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:z-10 hover:scale-[1.08] hover:shadow-[0_20px_60px_rgba(0,0,0,0.2)]`}
+      className="relative block h-[280px] w-[200px] flex-shrink-0 overflow-hidden rounded-xl bg-text/5"
+    >
+      <Image
+        src={card.thumbnail}
+        alt={card.brand}
+        width={200}
+        height={280}
+        className="h-full w-full object-cover"
+        quality={35}
+      />
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/30 text-white/80">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+            <polygon points="6 3 20 12 6 21 6 3" />
+          </svg>
+        </div>
+      </div>
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-4 pt-16">
+        <span className={`mb-1.5 inline-block rounded-full ${pillColor} px-2.5 py-0.5 font-sans text-[8px] font-medium uppercase tracking-[0.12em] text-bg`}>
+          {card.type}
+        </span>
+        <p className="font-sans text-xs font-medium text-white/90">{card.brand}</p>
+      </div>
+    </a>
+  );
+}
+
+function DesktopCard({ card }: { card: (typeof cards)[number] }) {
+  const pillColor = categoryColors[card.type] || "bg-terracotta";
+
+  return (
+    <a
+      href={card.href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group relative h-[380px] w-[280px] flex-shrink-0 cursor-pointer overflow-hidden rounded-xl bg-text/5 transition-all duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:z-10 hover:scale-[1.08] hover:shadow-[0_20px_60px_rgba(0,0,0,0.2)]"
     >
       <Image
         src={card.thumbnail}
         alt={card.brand}
         fill
         className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-        sizes={compact ? "200px" : "280px"}
-        quality={compact ? 40 : 75}
+        sizes="280px"
+        quality={75}
       />
-
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/30 text-white/80 transition-all duration-300 group-hover:bg-black/50 group-hover:text-white">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
@@ -69,60 +102,18 @@ function Card({ card, compact }: { card: (typeof cards)[number]; compact: boolea
           </svg>
         </div>
       </div>
-
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-5 pt-20">
         <span className={`mb-2 inline-block rounded-full ${pillColor} px-3 py-1 font-sans text-[9px] font-medium uppercase tracking-[0.12em] text-bg`}>
           {card.type}
         </span>
-        <p className="font-sans text-sm font-medium text-white/90">
-          {card.brand}
-        </p>
+        <p className="font-sans text-sm font-medium text-white/90">{card.brand}</p>
       </div>
     </a>
   );
 }
 
-function DesktopCarousel() {
-  const allCards = [...cards, ...cards];
-
-  return (
-    <div
-      className="relative overflow-x-clip overflow-y-visible"
-      style={{
-        maskImage: "linear-gradient(to right, transparent, black 5%, black 95%, transparent)",
-        WebkitMaskImage: "linear-gradient(to right, transparent, black 5%, black 95%, transparent)",
-      }}
-    >
-      <div
-        className="group flex w-max items-center gap-5 py-8 pl-5 hover:[animation-play-state:paused]"
-        style={{ animation: "marquee 80s linear infinite" }}
-      >
-        {allCards.map((card, i) => (
-          <Card key={i} card={card} compact={false} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function MobileCarousel() {
-  const mobileCards = cards.slice(0, 8);
-
-  return (
-    <div className="scrollbar-hide overflow-x-auto px-5">
-      <div className="flex w-max items-center gap-4 py-4">
-        {mobileCards.map((card, i) => (
-          <Card key={i} card={card} compact />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export default function UGCPortfolio() {
   const [isMobile, setIsMobile] = useState(false);
-  const [shouldRender, setShouldRender] = useState(false);
-  const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 768px)");
@@ -132,24 +123,8 @@ export default function UGCPortfolio() {
     return () => mq.removeEventListener("change", handler);
   }, []);
 
-  // Only mount the carousel when the section is near the viewport
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setShouldRender(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: "200px" },
-    );
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
+  const mobileCards = cards.slice(0, 6);
+  const desktopCards = [...cards, ...cards];
 
   return (
     <section id="ugc" className="bg-bg pt-24 pb-12 md:pt-28 md:pb-14">
@@ -161,15 +136,34 @@ export default function UGCPortfolio() {
         />
       </Container>
 
-      <div ref={sentinelRef} className="mt-16">
-        {shouldRender ? (
-          <ScrollReveal>
-            {isMobile ? <MobileCarousel /> : <DesktopCarousel />}
-          </ScrollReveal>
+      <ScrollReveal delay={0.15}>
+        {isMobile ? (
+          <div className="scrollbar-hide mt-12 overflow-x-auto px-5">
+            <div className="flex w-max items-center gap-3 py-2">
+              {mobileCards.map((card, i) => (
+                <MobileCard key={i} card={card} />
+              ))}
+            </div>
+          </div>
         ) : (
-          <div className="h-[320px]" />
+          <div
+            className="relative mt-16 overflow-x-clip overflow-y-visible"
+            style={{
+              maskImage: "linear-gradient(to right, transparent, black 5%, black 95%, transparent)",
+              WebkitMaskImage: "linear-gradient(to right, transparent, black 5%, black 95%, transparent)",
+            }}
+          >
+            <div
+              className="group flex w-max items-center gap-5 py-8 pl-5 hover:[animation-play-state:paused]"
+              style={{ animation: "marquee 80s linear infinite" }}
+            >
+              {desktopCards.map((card, i) => (
+                <DesktopCard key={i} card={card} />
+              ))}
+            </div>
+          </div>
         )}
-      </div>
+      </ScrollReveal>
 
       <Container>
         <ScrollReveal delay={0.25}>

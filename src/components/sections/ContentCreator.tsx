@@ -149,7 +149,11 @@ export default function ContentCreator() {
       try {
         const res = await fetch("/api/instagram");
         const data = await res.json();
-        if (data.posts?.length > 0) { setPosts(data.posts.slice(0, 9)); setIsLive(true); }
+        if (data.posts?.length > 0) {
+          const isMob = window.matchMedia("(max-width: 768px)").matches;
+          setPosts(data.posts.slice(0, isMob ? 6 : 9));
+          setIsLive(true);
+        }
         if (data.profile) setProfile(data.profile);
       } catch { /* fallback */ }
     }
