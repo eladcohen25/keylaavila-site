@@ -1,40 +1,24 @@
-import MobileProvider from "@/lib/MobileProvider";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-import Hero from "@/components/sections/Hero";
-import About from "@/components/sections/About";
-import Services from "@/components/sections/Services";
-import UGCPortfolio from "@/components/sections/UGCPortfolio";
-import BrandLogos from "@/components/sections/BrandLogos";
-import ContentCreator from "@/components/sections/ContentCreator";
-import Credentials from "@/components/sections/Credentials";
-import Testimonials from "@/components/sections/Testimonials";
-import Gallery from "@/components/sections/Gallery";
-import Booking from "@/components/sections/Booking";
-import FAQ from "@/components/sections/FAQ";
-import ShopLinks from "@/components/sections/ShopLinks";
-import DebugOverlay from "@/components/DebugOverlay";
+"use client";
+
+import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
+
+const MobilePage = dynamic(() => import("@/components/MobilePage"), { ssr: false });
+
+const DesktopPage = dynamic(() => import("@/components/DesktopPage"), { ssr: false });
 
 export default function Home() {
-  return (
-    <MobileProvider>
-      <DebugOverlay />
-      <Navbar />
-      <main>
-        <Hero />
-        <About />
-        <Services />
-        <UGCPortfolio />
-        <BrandLogos />
-        <ContentCreator />
-        <Credentials />
-        <Testimonials />
-        <Gallery />
-        <Booking />
-        <FAQ />
-        <ShopLinks />
-      </main>
-      <Footer />
-    </MobileProvider>
-  );
+  const [isMobile, setIsMobile] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  if (isMobile === null) return null;
+
+  return isMobile ? <MobilePage /> : <DesktopPage />;
 }
