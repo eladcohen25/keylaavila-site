@@ -42,41 +42,42 @@ const cards = [
   { type: "BRAND COLLAB", brand: "Jobee Swim", href: "https://www.tiktok.com/@keylanavilaa/video/7393854410738355502", thumbnail: "/images/ugc/jobee-swim.jpg" },
 ];
 
+/* ───── Mobile: zero images, just styled text cards ───── */
 function MobileCard({ card }: { card: (typeof cards)[number] }) {
-  const pillColor = categoryColors[card.type] || "bg-terracotta";
+  const bgColor: Record<string, string> = {
+    "UGC VIDEO": "from-terracotta/90 to-terracotta/70",
+    "BRAND COLLAB": "from-olive/90 to-olive/70",
+    "WEDDING": "from-burgundy/90 to-burgundy/70",
+    "EVENT": "from-burgundy/90 to-burgundy/70",
+    "MODELING": "from-text/90 to-text/70",
+    "TRAVEL": "from-olive/80 to-olive/60",
+    "TIKTOK": "from-text/90 to-text/70",
+  };
+  const gradient = bgColor[card.type] || "from-terracotta/90 to-terracotta/70";
 
   return (
     <a
       href={card.href}
       target="_blank"
       rel="noopener noreferrer"
-      className="relative block h-[280px] w-[200px] flex-shrink-0 overflow-hidden rounded-xl bg-text/5"
+      className={`flex h-[160px] w-[260px] flex-shrink-0 flex-col justify-end rounded-xl bg-gradient-to-br ${gradient} p-5`}
     >
-      <Image
-        src={card.thumbnail}
-        alt={card.brand}
-        width={200}
-        height={280}
-        className="h-full w-full object-cover"
-        quality={35}
-      />
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/30 text-white/80">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-            <polygon points="6 3 20 12 6 21 6 3" />
-          </svg>
-        </div>
-      </div>
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-4 pt-16">
-        <span className={`mb-1.5 inline-block rounded-full ${pillColor} px-2.5 py-0.5 font-sans text-[8px] font-medium uppercase tracking-[0.12em] text-bg`}>
+      <div className="flex items-center gap-2">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none" className="text-bg/80">
+          <polygon points="6 3 20 12 6 21 6 3" />
+        </svg>
+        <span className="font-sans text-[9px] font-medium uppercase tracking-[0.12em] text-bg/70">
           {card.type}
         </span>
-        <p className="font-sans text-xs font-medium text-white/90">{card.brand}</p>
       </div>
+      <p className="mt-2 font-sans text-sm font-medium leading-snug text-bg">
+        {card.brand}
+      </p>
     </a>
   );
 }
 
+/* ───── Desktop: full image carousel with marquee ───── */
 function DesktopCard({ card }: { card: (typeof cards)[number] }) {
   const pillColor = categoryColors[card.type] || "bg-terracotta";
 
@@ -138,6 +139,7 @@ export default function UGCPortfolio() {
 
       <ScrollReveal delay={0.15}>
         {isMobile ? (
+          /* Mobile: swipeable text-only cards — zero images */
           <div className="scrollbar-hide mt-12 overflow-x-auto px-5">
             <div className="flex w-max items-center gap-3 py-2">
               {mobileCards.map((card, i) => (
@@ -146,6 +148,7 @@ export default function UGCPortfolio() {
             </div>
           </div>
         ) : (
+          /* Desktop: full image marquee */
           <div
             className="relative mt-16 overflow-x-clip overflow-y-visible"
             style={{
