@@ -9,50 +9,65 @@ import ScrollReveal from "@/components/ui/ScrollReveal";
 import Button from "@/components/ui/Button";
 import { useIsMobile } from "@/lib/MobileProvider";
 
-export default function About() {
-  const isMobile = useIsMobile();
-  const sectionRef = useRef<HTMLElement>(null);
+function AboutImageDesktop() {
+  const sectionRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start end", "end start"],
   });
-
   const imageY = useTransform(scrollYProgress, [0, 1], [40, -40]);
 
-  const imageContent = (
-    <>
+  return (
+    <div ref={sectionRef}>
+      <ScrollReveal direction="left">
+        <motion.div className="relative" style={{ y: imageY }}>
+          <div className="relative aspect-[3/4] overflow-hidden rounded-xl shadow-[8px_8px_40px_rgba(100,60,40,0.12)]">
+            <Image
+              src="/images/lifestyle/main-photo.jpg"
+              alt="Keyla Avila — editorial portrait"
+              fill
+              className="object-cover"
+              sizes="40vw"
+            />
+          </div>
+          <div className="absolute -bottom-6 -right-6 -z-10 h-full w-full rounded-xl bg-blush/50" />
+        </motion.div>
+      </ScrollReveal>
+    </div>
+  );
+}
+
+function AboutImageMobile() {
+  return (
+    <div className="relative">
       <div className="relative aspect-[3/4] overflow-hidden rounded-xl shadow-[8px_8px_40px_rgba(100,60,40,0.12)]">
         <Image
           src="/images/lifestyle/main-photo.jpg"
           alt="Keyla Avila — editorial portrait"
           fill
           className="object-cover"
-          sizes="(max-width: 768px) 90vw, 40vw"
+          sizes="90vw"
+          quality={50}
         />
       </div>
       <div className="absolute -bottom-6 -right-6 -z-10 h-full w-full rounded-xl bg-blush/50" />
-    </>
+    </div>
   );
+}
+
+export default function About() {
+  const isMobile = useIsMobile();
 
   return (
     <section
       id="about"
-      ref={sectionRef}
-      className="section-fade relative bg-bg-alt py-28 md:py-36 lg:py-44"
+      className="relative bg-bg-alt py-28 md:py-36 lg:py-44"
     >
       <Container className="relative z-10">
         <div className="grid items-center gap-16 lg:grid-cols-12 lg:gap-20">
           {/* Image Column */}
           <div className="lg:col-span-5">
-            <ScrollReveal direction="left">
-              {isMobile !== false ? (
-                <div className="relative">{imageContent}</div>
-              ) : (
-                <motion.div className="relative" style={{ y: imageY }}>
-                  {imageContent}
-                </motion.div>
-              )}
-            </ScrollReveal>
+            {isMobile !== false ? <AboutImageMobile /> : <AboutImageDesktop />}
           </div>
 
           {/* Text Column */}

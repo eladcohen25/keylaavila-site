@@ -19,7 +19,7 @@ function HeroMobile() {
           className="object-cover object-top"
           priority
           sizes="100vw"
-          quality={80}
+          quality={60}
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10" />

@@ -174,13 +174,15 @@ export default function ContentCreator() {
   const [isLive, setIsLive] = useState(false);
 
   useEffect(() => {
+    // Skip Instagram fetch entirely on mobile to reduce image memory
+    if (window.matchMedia("(max-width: 768px)").matches) return;
+
     async function fetchPosts() {
       try {
         const res = await fetch("/api/instagram");
         const data = await res.json();
         if (data.posts?.length > 0) {
-          const isMob = window.matchMedia("(max-width: 768px)").matches;
-          setPosts(data.posts.slice(0, isMob ? 4 : 9));
+          setPosts(data.posts.slice(0, 9));
           setIsLive(true);
         }
         if (data.profile) setProfile(data.profile);
@@ -191,6 +193,51 @@ export default function ContentCreator() {
 
   const mobile = isMobile !== false;
 
+  // MOBILE: lightweight section — no image grid, no API images, just a profile link
+  if (mobile) {
+    return (
+      <section id="content" className="relative bg-bg-alt py-24">
+        <Container className="relative z-10">
+          <SectionHeading
+            label="Creator"
+            title="Content That Educates & Inspires"
+            subtitle="From workout breakdowns backed by kinesiology to honest wellness conversations — content designed to inform, empower, and connect."
+          />
+
+          <div className="mx-auto mt-12 max-w-sm">
+            <a
+              href="https://instagram.com/keylanavila" target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-4 rounded-xl border border-terracotta/15 bg-blush px-5 py-4"
+            >
+              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-terracotta/10">
+                <InstagramIcon size={20} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-sans text-sm font-medium text-text">@keylanavila</span>
+                  <Image src="/Instagram check.png" alt="Verified" width={14} height={14} className="flex-shrink-0" />
+                </div>
+                <p className="mt-0.5 font-sans text-xs font-light text-text-muted">
+                  Creator · Trainer · Pilates Instructor
+                </p>
+              </div>
+              <span className="flex-shrink-0 rounded-full bg-text px-4 py-2 font-sans text-[11px] font-medium uppercase tracking-wider text-bg">
+                Follow
+              </span>
+            </a>
+
+            <div className="mt-6 text-center">
+              <Button href="https://instagram.com/keylanavila" variant="text" arrowRight>
+                View content on Instagram
+              </Button>
+            </div>
+          </div>
+        </Container>
+      </section>
+    );
+  }
+
+  // DESKTOP: full section with API-powered grid
   return (
     <section id="content" className="relative bg-bg-alt py-24 md:py-28">
       <Container className="relative z-10">
@@ -218,13 +265,7 @@ export default function ContentCreator() {
                   <span className="font-sans text-sm font-medium text-text">
                     @{profile?.username || "keylanavila"}
                   </span>
-                  <Image
-                    src="/Instagram check.png"
-                    alt="Verified"
-                    width={14}
-                    height={14}
-                    className="flex-shrink-0"
-                  />
+                  <Image src="/Instagram check.png" alt="Verified" width={14} height={14} className="flex-shrink-0" />
                   {isLive && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-terracotta/10 px-2 py-0.5 font-sans text-[9px] font-medium uppercase tracking-wider text-terracotta">
                       <span className="relative flex h-1.5 w-1.5">
@@ -260,42 +301,26 @@ export default function ContentCreator() {
           </div>
         </ScrollReveal>
 
-        {/* Feed Grid */}
+        {/* Feed Grid — desktop only */}
         <ScrollReveal delay={0.2}>
           <div className="mx-auto mt-10 max-w-4xl">
-            <div className="grid grid-cols-3 gap-2 md:gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {isLive
-                ? posts.map((post, i) =>
-                    mobile ? (
-                      <MobilePostCard
-                        key={post.id}
-                        imageSrc={post.media_type === "VIDEO" ? post.thumbnail_url || post.media_url : post.media_url}
-                        alt={post.caption?.slice(0, 100) || "Instagram post"}
-                        href={post.permalink} mediaType={post.media_type}
-                      />
-                    ) : (
-                      <DesktopPostCard
-                        key={post.id}
-                        imageSrc={post.media_type === "VIDEO" ? post.thumbnail_url || post.media_url : post.media_url}
-                        alt={post.caption?.slice(0, 100) || "Instagram post"}
-                        href={post.permalink} mediaType={post.media_type}
-                        caption={post.caption} timestamp={post.timestamp} index={i}
-                      />
-                    )
-                  )
-                : (mobile ? fallbackImages.slice(0, 4) : fallbackImages).map((img, i) =>
-                    mobile ? (
-                      <MobilePostCard
-                        key={img.src} imageSrc={img.src} alt={img.alt}
-                        href="https://instagram.com/keylanavila" mediaType={img.type}
-                      />
-                    ) : (
-                      <DesktopPostCard
-                        key={img.src} imageSrc={img.src} alt={img.alt}
-                        href="https://instagram.com/keylanavila" mediaType={img.type} index={i}
-                      />
-                    )
-                  )}
+                ? posts.map((post, i) => (
+                    <DesktopPostCard
+                      key={post.id}
+                      imageSrc={post.media_type === "VIDEO" ? post.thumbnail_url || post.media_url : post.media_url}
+                      alt={post.caption?.slice(0, 100) || "Instagram post"}
+                      href={post.permalink} mediaType={post.media_type}
+                      caption={post.caption} timestamp={post.timestamp} index={i}
+                    />
+                  ))
+                : fallbackImages.map((img, i) => (
+                    <DesktopPostCard
+                      key={img.src} imageSrc={img.src} alt={img.alt}
+                      href="https://instagram.com/keylanavila" mediaType={img.type} index={i}
+                    />
+                  ))}
             </div>
             <div className="mt-8 text-center">
               <Button href="https://instagram.com/keylanavila" variant="text" arrowRight>

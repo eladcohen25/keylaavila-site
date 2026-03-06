@@ -25,9 +25,29 @@ export default function DebugOverlay() {
       const loadedImgs = document.querySelectorAll("img[src]:not([src=''])").length;
       const videos = document.querySelectorAll("video").length;
       const motionEls = document.querySelectorAll("[style*=transform],[style*=opacity]").length;
+      const canvases = document.querySelectorAll("canvas").length;
       console.log(
-        `[DEBUG] DOM=${nodes} img=${imgs}(loaded:${loadedImgs}) video=${videos} motionStyled=${motionEls}`
+        `[DEBUG] DOM=${nodes} img=${imgs}(loaded:${loadedImgs}) video=${videos} canvas=${canvases} motionStyled=${motionEls}`
       );
+
+      // Per-section image counts
+      const sections = document.querySelectorAll("section[id]");
+      const sectionImgCounts: string[] = [];
+      sections.forEach((s) => {
+        const id = (s as HTMLElement).id;
+        const count = s.querySelectorAll("img").length;
+        if (count > 0) sectionImgCounts.push(`#${id}:${count}`);
+      });
+      if (sectionImgCounts.length) {
+        console.log(`[DEBUG] Images per section: ${sectionImgCounts.join(", ")}`);
+      }
+
+      // Compositing layer hints
+      const blurEls = document.querySelectorAll("[class*=backdrop-blur],[class*=blur]").length;
+      const fixedEls = document.querySelectorAll("[class*=fixed]").length;
+      if (blurEls > 0 || fixedEls > 0) {
+        console.log(`[DEBUG] GPU hints: blur=${blurEls} fixed=${fixedEls}`);
+      }
 
       const perf = performance as unknown as {
         memory?: {
