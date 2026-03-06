@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { useState, useEffect } from "react";
 import Container from "@/components/ui/Container";
 import SectionHeading from "@/components/ui/SectionHeading";
 import ScrollReveal from "@/components/ui/ScrollReveal";
@@ -40,21 +40,33 @@ const philosophy = [
 ];
 
 export default function Credentials() {
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    setIsDesktop(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
   return (
     <section id="credentials" className="relative overflow-hidden bg-bg-alt py-24 pb-[100px] md:py-28 md:pb-[100px]">
-      {/* Background training video */}
-      <div className="absolute right-0 top-0 hidden h-full w-2/5 overflow-hidden opacity-[0.18] lg:block">
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="h-full w-full object-cover object-center"
-          aria-hidden="true"
-        >
-          <source src="/videos/training-clip.mp4" type="video/mp4" />
-        </video>
-      </div>
+      {/* Background training video — only rendered on desktop to prevent mobile download */}
+      {isDesktop && (
+        <div className="absolute right-0 top-0 h-full w-2/5 overflow-hidden opacity-[0.18]">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="h-full w-full object-cover object-center"
+            aria-hidden="true"
+          >
+            <source src="/videos/training-clip.mp4" type="video/mp4" />
+          </video>
+        </div>
+      )}
 
       <Container className="relative z-10">
         <SectionHeading

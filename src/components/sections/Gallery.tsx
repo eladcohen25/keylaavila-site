@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useScroll, useTransform } from "framer-motion";
-import { useRef, useState, useEffect } from "react";
+import { useRef } from "react";
 import Image from "next/image";
 import Container from "@/components/ui/Container";
 import SectionHeading from "@/components/ui/SectionHeading";
@@ -30,6 +30,15 @@ const galleryItems = [
   { id: 20, src: "/images/fitness/fitness2-img_3050.jpg", alt: "Training moment", aspect: "aspect-[1/1]" },
 ];
 
+const mobileItems = galleryItems.slice(0, 8);
+
+const col1All = galleryItems.filter((_, i) => i % 3 === 0);
+const col2All = galleryItems.filter((_, i) => i % 3 === 1);
+const col3All = galleryItems.filter((_, i) => i % 3 === 2);
+
+const col1Mobile = mobileItems.filter((_, i) => i % 2 === 0);
+const col2Mobile = mobileItems.filter((_, i) => i % 2 === 1);
+
 export default function Gallery() {
   const sectionRef = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({
@@ -37,29 +46,9 @@ export default function Gallery() {
     offset: ["start end", "end start"],
   });
 
-  const [isMobile, setIsMobile] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 768px)");
-    setIsMobile(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
-
   const col1Y = useTransform(scrollYProgress, [0, 1], [0, -30]);
   const col2Y = useTransform(scrollYProgress, [0, 1], [0, 20]);
   const col3Y = useTransform(scrollYProgress, [0, 1], [0, -15]);
-
-  if (isMobile === null) {
-    return <section id="gallery" className="relative bg-bg-alt py-24"><div style={{ minHeight: 500 }} /></section>;
-  }
-
-  const items = isMobile ? galleryItems.slice(0, 10) : galleryItems;
-
-  const col1 = items.filter((_, i) => i % 3 === 0);
-  const col2 = items.filter((_, i) => i % 3 === 1);
-  const col3 = items.filter((_, i) => i % 3 === 2);
 
   return (
     <section id="gallery" ref={sectionRef} className="section-fade relative bg-bg-alt py-24 md:py-28">
@@ -71,16 +60,34 @@ export default function Gallery() {
           decorativeLine
         />
 
-        <div className="mt-20 grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
-          <motion.div className="flex flex-col gap-3 md:gap-4" style={{ y: col1Y }}>
-            {col1.map((item, i) => (
+        {/* Mobile: simple 2-column grid, fewer images */}
+        <div className="mt-16 grid grid-cols-2 gap-3 md:hidden">
+          <div className="flex flex-col gap-3">
+            {col1Mobile.map((item) => (
+              <div key={item.id} className={`relative ${item.aspect} overflow-hidden rounded-[4px]`}>
+                <Image src={item.src} alt={item.alt} fill className="object-cover" sizes="45vw" quality={60} />
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-col gap-3 pt-6">
+            {col2Mobile.map((item) => (
+              <div key={item.id} className={`relative ${item.aspect} overflow-hidden rounded-[4px]`}>
+                <Image src={item.src} alt={item.alt} fill className="object-cover" sizes="45vw" quality={60} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Desktop: 3-column parallax masonry */}
+        <div className="mt-20 hidden grid-cols-3 gap-4 md:grid">
+          <motion.div className="flex flex-col gap-4" style={{ y: col1Y }}>
+            {col1All.map((item, i) => (
               <ScrollReveal key={item.id} delay={i * 0.06}>
                 <div className={`group relative ${item.aspect} cursor-pointer overflow-hidden rounded-[4px]`}>
                   <Image
                     src={item.src} alt={item.alt} fill
                     className="object-cover transition-all duration-[350ms] ease-out group-hover:scale-[1.02]"
-                    sizes="(max-width: 768px) 45vw, 33vw"
-                    quality={isMobile ? 55 : 75}
+                    sizes="33vw" quality={75}
                   />
                   <div className="absolute inset-0 bg-text/0 transition-all duration-[350ms] group-hover:bg-text/5 group-hover:shadow-[0_8px_30px_rgba(100,60,40,0.15)]" />
                 </div>
@@ -88,15 +95,14 @@ export default function Gallery() {
             ))}
           </motion.div>
 
-          <motion.div className="flex flex-col gap-3 pt-8 md:gap-4 md:pt-12" style={{ y: col2Y }}>
-            {col2.map((item, i) => (
+          <motion.div className="flex flex-col gap-4 pt-12" style={{ y: col2Y }}>
+            {col2All.map((item, i) => (
               <ScrollReveal key={item.id} delay={i * 0.06 + 0.03}>
                 <div className={`group relative ${item.aspect} cursor-pointer overflow-hidden rounded-[4px]`}>
                   <Image
                     src={item.src} alt={item.alt} fill
                     className="object-cover transition-all duration-[350ms] ease-out group-hover:scale-[1.02]"
-                    sizes="(max-width: 768px) 45vw, 33vw"
-                    quality={isMobile ? 55 : 75}
+                    sizes="33vw" quality={75}
                   />
                   <div className="absolute inset-0 bg-text/0 transition-all duration-[350ms] group-hover:bg-text/5 group-hover:shadow-[0_8px_30px_rgba(100,60,40,0.15)]" />
                 </div>
@@ -104,15 +110,14 @@ export default function Gallery() {
             ))}
           </motion.div>
 
-          <motion.div className="hidden flex-col gap-3 pt-4 md:flex md:gap-4 md:pt-6" style={{ y: col3Y }}>
-            {col3.map((item, i) => (
+          <motion.div className="flex flex-col gap-4 pt-6" style={{ y: col3Y }}>
+            {col3All.map((item, i) => (
               <ScrollReveal key={item.id} delay={i * 0.06 + 0.06}>
                 <div className={`group relative ${item.aspect} cursor-pointer overflow-hidden rounded-[4px]`}>
                   <Image
                     src={item.src} alt={item.alt} fill
                     className="object-cover transition-all duration-[350ms] ease-out group-hover:scale-[1.02]"
-                    sizes="33vw"
-                    quality={75}
+                    sizes="33vw" quality={75}
                   />
                   <div className="absolute inset-0 bg-text/0 transition-all duration-[350ms] group-hover:bg-text/5 group-hover:shadow-[0_8px_30px_rgba(100,60,40,0.15)]" />
                 </div>
