@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Container from "@/components/ui/Container";
 import ScrollReveal from "@/components/ui/ScrollReveal";
 
@@ -24,8 +25,14 @@ export default function Footer() {
         <ScrollReveal>
           <div className="grid gap-12 md:grid-cols-3 md:gap-8">
             <div>
-              <a href="#" className="font-serif text-2xl font-light tracking-tight text-bg">
-                Keyla Avila
+              <a href="#" className="relative block h-12 w-32">
+                <Image
+                  src="/final keyla logo.png"
+                  alt="Keyla Avila"
+                  fill
+                  className="object-contain brightness-0 invert"
+                  sizes="128px"
+                />
               </a>
               <p className="mt-4 max-w-xs font-sans text-sm font-light leading-relaxed text-border/70">
                 Creator, certified personal trainer, and Pilates instructor.
@@ -71,10 +78,10 @@ export default function Footer() {
                 ))}
               </ul>
               <a
-                href="mailto:hello@keylaavila.com"
+                href="mailto:keylaavila01@gmail.com"
                 className="mt-6 inline-block font-sans text-sm font-light text-border/50 transition-colors duration-200 hover:text-terracotta"
               >
-                hello@keylaavila.com
+                keylaavila01@gmail.com
               </a>
             </div>
           </div>

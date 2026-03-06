@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useScroll, useTransform } from "framer-motion";
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import Container from "@/components/ui/Container";
 import SectionHeading from "@/components/ui/SectionHeading";
@@ -37,13 +37,25 @@ export default function Gallery() {
     offset: ["start end", "end start"],
   });
 
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
   const col1Y = useTransform(scrollYProgress, [0, 1], [0, -30]);
   const col2Y = useTransform(scrollYProgress, [0, 1], [0, 20]);
   const col3Y = useTransform(scrollYProgress, [0, 1], [0, -15]);
 
-  const col1 = galleryItems.filter((_, i) => i % 3 === 0);
-  const col2 = galleryItems.filter((_, i) => i % 3 === 1);
-  const col3 = galleryItems.filter((_, i) => i % 3 === 2);
+  const items = isMobile ? galleryItems.slice(0, 10) : galleryItems;
+
+  const col1 = items.filter((_, i) => i % 3 === 0);
+  const col2 = items.filter((_, i) => i % 3 === 1);
+  const col3 = items.filter((_, i) => i % 3 === 2);
 
   return (
     <section id="gallery" ref={sectionRef} className="section-fade relative bg-bg-alt py-24 md:py-28">
@@ -63,7 +75,8 @@ export default function Gallery() {
                   <Image
                     src={item.src} alt={item.alt} fill
                     className="object-cover transition-all duration-[350ms] ease-out group-hover:scale-[1.02]"
-                    sizes="(max-width: 768px) 50vw, 33vw"
+                    sizes="(max-width: 768px) 45vw, 33vw"
+                    quality={isMobile ? 55 : 75}
                   />
                   <div className="absolute inset-0 bg-text/0 transition-all duration-[350ms] group-hover:bg-text/5 group-hover:shadow-[0_8px_30px_rgba(100,60,40,0.15)]" />
                 </div>
@@ -78,7 +91,8 @@ export default function Gallery() {
                   <Image
                     src={item.src} alt={item.alt} fill
                     className="object-cover transition-all duration-[350ms] ease-out group-hover:scale-[1.02]"
-                    sizes="(max-width: 768px) 50vw, 33vw"
+                    sizes="(max-width: 768px) 45vw, 33vw"
+                    quality={isMobile ? 55 : 75}
                   />
                   <div className="absolute inset-0 bg-text/0 transition-all duration-[350ms] group-hover:bg-text/5 group-hover:shadow-[0_8px_30px_rgba(100,60,40,0.15)]" />
                 </div>
@@ -93,7 +107,8 @@ export default function Gallery() {
                   <Image
                     src={item.src} alt={item.alt} fill
                     className="object-cover transition-all duration-[350ms] ease-out group-hover:scale-[1.02]"
-                    sizes="(max-width: 768px) 50vw, 33vw"
+                    sizes="33vw"
+                    quality={75}
                   />
                   <div className="absolute inset-0 bg-text/0 transition-all duration-[350ms] group-hover:bg-text/5 group-hover:shadow-[0_8px_30px_rgba(100,60,40,0.15)]" />
                 </div>

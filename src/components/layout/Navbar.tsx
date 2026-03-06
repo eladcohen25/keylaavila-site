@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import Container from "@/components/ui/Container";
 
 const navLinks = [
@@ -64,11 +65,15 @@ export default function Navbar() {
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
       >
         <Container className="flex items-center justify-between py-4 md:py-5">
-          <a
-            href="#"
-            className="font-serif text-xl font-medium tracking-tight text-text md:text-2xl"
-          >
-            Keyla Avila
+          <a href="#" className="relative block h-10 w-28 md:h-12 md:w-32">
+            <Image
+              src="/final keyla logo.png"
+              alt="Keyla Avila"
+              fill
+              className="object-contain"
+              sizes="128px"
+              priority
+            />
           </a>
 
           <nav className="hidden items-center gap-8 lg:flex">

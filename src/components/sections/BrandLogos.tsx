@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Container from "@/components/ui/Container";
 import SectionHeading from "@/components/ui/SectionHeading";
@@ -23,9 +24,23 @@ const logos = [
   { src: "/Logo Scroll/noa logo.PNG", alt: "Noa" },
 ];
 
-const allLogos = [...logos, ...logos, ...logos, ...logos];
-
 export default function BrandLogos() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  const allLogos = isMobile
+    ? [...logos, ...logos]
+    : [...logos, ...logos, ...logos, ...logos];
+
+  const animDuration = isMobile ? "25s" : "40s";
+
   return (
     <section className="relative bg-bg-alt pt-14 pb-24 md:pt-16 md:pb-28">
       <Container className="relative z-10">
@@ -60,7 +75,10 @@ export default function BrandLogos() {
             WebkitMaskImage: "linear-gradient(to right, transparent, black 10%, black 90%, transparent)",
           }}
         >
-          <div className="group flex w-max animate-[marquee_40s_linear_infinite] items-center gap-[60px] hover:[animation-play-state:paused]">
+          <div
+            className="group flex w-max items-center gap-[60px] hover:[animation-play-state:paused]"
+            style={{ animation: `marquee ${animDuration} linear infinite` }}
+          >
             {allLogos.map((logo, i) => (
               <div
                 key={i}
@@ -73,6 +91,7 @@ export default function BrandLogos() {
                   height={56}
                   className="h-14 w-auto max-w-[180px] object-contain"
                   style={{ height: 56, width: "auto" }}
+                  quality={60}
                 />
               </div>
             ))}

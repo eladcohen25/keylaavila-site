@@ -103,10 +103,11 @@ function PostCard({
       <Image
         src={imageSrc} alt={alt} fill
         className="object-cover transition-transform duration-[350ms] ease-out group-hover:scale-[1.03]"
-        sizes="(max-width: 768px) 33vw, 18vw"
+        sizes="(max-width: 768px) 30vw, 18vw"
+        quality={60}
       />
       {mediaType !== "IMAGE" && (
-        <div className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-full bg-black/40 px-2 py-1 text-white backdrop-blur-sm">
+          <div className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-full bg-black/50 px-2 py-1 text-white">
           {mediaType === "VIDEO" ? <PlayIcon /> : <CarouselIcon />}
         </div>
       )}
@@ -114,7 +115,7 @@ function PostCard({
       <AnimatePresence>
         {hovered && (
           <motion.div
-            className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-burgundy/15 p-3 backdrop-blur-[1px]"
+            className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-burgundy/20 p-3"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
           >

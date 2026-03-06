@@ -29,6 +29,10 @@ export const metadata: Metadata = {
     "kinesiology",
     "fitness",
   ],
+  icons: {
+    icon: "/keyla favicon.png",
+    apple: "/keyla favicon.png",
+  },
   openGraph: {
     title: "Keyla Avila — Creator, Trainer & Certified Pilates Instructor",
     description:

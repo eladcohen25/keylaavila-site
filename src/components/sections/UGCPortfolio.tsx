@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Container from "@/components/ui/Container";
 import SectionHeading from "@/components/ui/SectionHeading";
@@ -41,28 +42,30 @@ const cards = [
   { type: "BRAND COLLAB", brand: "Jobee Swim", href: "https://www.tiktok.com/@keylanavilaa/video/7393854410738355502", thumbnail: "/images/ugc/jobee-swim.jpg" },
 ];
 
-const allCards = [...cards, ...cards];
-
-function Card({ card }: { card: (typeof cards)[number] }) {
+function Card({ card, compact }: { card: (typeof cards)[number]; compact: boolean }) {
   const pillColor = categoryColors[card.type] || "bg-terracotta";
+  const sizeClasses = compact
+    ? "h-[300px] w-[220px]"
+    : "h-[380px] w-[280px]";
 
   return (
     <a
       href={card.href}
       target="_blank"
       rel="noopener noreferrer"
-      className="group relative h-[380px] w-[280px] flex-shrink-0 cursor-pointer overflow-hidden rounded-xl bg-text/5 transition-all duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:z-10 hover:scale-[1.08] hover:shadow-[0_20px_60px_rgba(0,0,0,0.2)]"
+      className={`group relative ${sizeClasses} flex-shrink-0 cursor-pointer overflow-hidden rounded-xl bg-text/5 transition-all duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:z-10 hover:scale-[1.08] hover:shadow-[0_20px_60px_rgba(0,0,0,0.2)]`}
     >
       <Image
         src={card.thumbnail}
         alt={card.brand}
         fill
         className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-        sizes="280px"
+        sizes={compact ? "220px" : "280px"}
+        quality={compact ? 55 : 75}
       />
 
       <div className="absolute inset-0 flex items-center justify-center">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/30 text-white/80 backdrop-blur-sm transition-all duration-300 group-hover:bg-black/50 group-hover:text-white">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/30 text-white/80 transition-all duration-300 group-hover:bg-black/50 group-hover:text-white">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
             <polygon points="6 3 20 12 6 21 6 3" />
           </svg>
@@ -82,6 +85,20 @@ function Card({ card }: { card: (typeof cards)[number] }) {
 }
 
 export default function UGCPortfolio() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  const visibleCards = isMobile ? cards.slice(0, 10) : cards;
+  const allCards = [...visibleCards, ...visibleCards];
+  const animDuration = isMobile ? "40s" : "80s";
+
   return (
     <section id="ugc" className="bg-bg pt-24 pb-12 md:pt-28 md:pb-14">
       <Container>
@@ -100,9 +117,12 @@ export default function UGCPortfolio() {
             WebkitMaskImage: "linear-gradient(to right, transparent, black 5%, black 95%, transparent)",
           }}
         >
-          <div className="group flex w-max animate-[marquee_80s_linear_infinite] items-center gap-5 py-8 pl-5 hover:[animation-play-state:paused]">
+          <div
+            className="group flex w-max items-center gap-5 py-8 pl-5 hover:[animation-play-state:paused]"
+            style={{ animation: `marquee ${animDuration} linear infinite` }}
+          >
             {allCards.map((card, i) => (
-              <Card key={i} card={card} />
+              <Card key={i} card={card} compact={isMobile} />
             ))}
           </div>
         </div>

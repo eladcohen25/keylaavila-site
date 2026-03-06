@@ -410,8 +410,8 @@ export default function Booking() {
                   <h4 className="font-sans text-[11px] font-medium uppercase tracking-[0.18em] text-terracotta">
                     Direct Contact
                   </h4>
-                  <a href="mailto:hello@keylaavila.com" className="mt-3 block font-sans text-base font-light text-text transition-colors duration-200 hover:text-terracotta">
-                    hello@keylaavila.com
+                  <a href="mailto:keylaavila01@gmail.com" className="mt-3 block font-sans text-base font-light text-text transition-colors duration-200 hover:text-terracotta">
+                    keylaavila01@gmail.com
                   </a>
                   <a href="https://instagram.com/keylanavila" target="_blank" rel="noopener noreferrer" className="mt-2 block font-sans text-base font-light text-text transition-colors duration-200 hover:text-terracotta">
                     @keylanavila
