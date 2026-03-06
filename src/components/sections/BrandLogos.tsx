@@ -4,7 +4,6 @@ import Image from "next/image";
 import Container from "@/components/ui/Container";
 import SectionHeading from "@/components/ui/SectionHeading";
 import ScrollReveal from "@/components/ui/ScrollReveal";
-import { useIsMobile } from "@/lib/MobileProvider";
 
 const stats = [
   { value: "15K+", label: "Followers" },
@@ -24,11 +23,7 @@ const logos = [
   { src: "/Logo Scroll/noa logo.PNG", alt: "Noa" },
 ];
 
-const allLogos = [...logos, ...logos, ...logos, ...logos];
-
 export default function BrandLogos() {
-  const isMobile = useIsMobile();
-
   return (
     <section className="relative bg-bg-alt pt-14 pb-24 md:pt-16 md:pb-28">
       <Container className="relative z-10">
@@ -55,59 +50,27 @@ export default function BrandLogos() {
         </ScrollReveal>
       </Container>
 
-      {/* Mobile: static grid — no animation, no marquee */}
-      <div className="mx-auto mt-10 grid max-w-sm grid-cols-4 items-center gap-6 px-4 md:hidden">
-        {logos.map((logo) => (
-          <div key={logo.alt} className="flex items-center justify-center opacity-50 grayscale">
-            <Image
-              src={logo.src}
-              alt={logo.alt}
-              width={80}
-              height={32}
-              className="h-8 w-auto max-w-[80px] object-contain"
-              style={{ height: 32, width: "auto" }}
-              quality={40}
-            />
-          </div>
-        ))}
-      </div>
-
-      {/* Desktop: scrolling marquee — only rendered when confirmed desktop */}
-      {isMobile === false && (
-        <div className="hidden md:block">
-          <ScrollReveal delay={0.2}>
+      {/* Static logo grid — no marquee, no animation */}
+      <ScrollReveal delay={0.2}>
+        <div className="mx-auto mt-12 flex max-w-4xl flex-wrap items-center justify-center gap-8 px-6 md:mt-16 md:gap-12">
+          {logos.map((logo) => (
             <div
-              className="relative mt-16 overflow-hidden"
-              style={{
-                maskImage: "linear-gradient(to right, transparent, black 10%, black 90%, transparent)",
-                WebkitMaskImage: "linear-gradient(to right, transparent, black 10%, black 90%, transparent)",
-              }}
+              key={logo.alt}
+              className="flex items-center justify-center opacity-50 grayscale transition-all duration-300 hover:opacity-100 hover:grayscale-0"
             >
-              <div
-                className="group flex w-max items-center gap-[60px] hover:[animation-play-state:paused]"
-                style={{ animation: "marquee 40s linear infinite" }}
-              >
-                {allLogos.map((logo, i) => (
-                  <div
-                    key={i}
-                    className="relative flex h-14 w-auto items-center opacity-50 grayscale transition-all duration-300 hover:opacity-100 hover:grayscale-0 hover:scale-105"
-                  >
-                    <Image
-                      src={logo.src}
-                      alt={logo.alt}
-                      width={180}
-                      height={56}
-                      className="h-14 w-auto max-w-[180px] object-contain"
-                      style={{ height: 56, width: "auto" }}
-                      quality={60}
-                    />
-                  </div>
-                ))}
-              </div>
+              <Image
+                src={logo.src}
+                alt={logo.alt}
+                width={120}
+                height={44}
+                className="h-8 w-auto max-w-[100px] object-contain md:h-12 md:max-w-[140px]"
+                style={{ height: "auto", width: "auto", maxHeight: 48 }}
+                quality={50}
+              />
             </div>
-          </ScrollReveal>
+          ))}
         </div>
-      )}
+      </ScrollReveal>
 
       <Container className="relative z-10">
         <ScrollReveal delay={0.3}>
