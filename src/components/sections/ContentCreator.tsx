@@ -7,6 +7,7 @@ import Container from "@/components/ui/Container";
 import SectionHeading from "@/components/ui/SectionHeading";
 import ScrollReveal from "@/components/ui/ScrollReveal";
 import Button from "@/components/ui/Button";
+import { useIsMobile } from "@/lib/MobileProvider";
 import type { InstagramPost, InstagramProfile } from "@/lib/instagram";
 
 function formatCount(n: number): string {
@@ -82,7 +83,35 @@ const fallbackImages = [
   { src: "/images/fitness/barbell-training.jpg", alt: "Barbell training", type: "IMAGE" as const },
 ];
 
-function PostCard({
+/* Mobile PostCard: zero framer-motion, zero useState, plain <a> tag */
+function MobilePostCard({
+  imageSrc, alt, href, mediaType,
+}: {
+  imageSrc: string; alt: string; href: string;
+  mediaType: "IMAGE" | "VIDEO" | "CAROUSEL_ALBUM";
+}) {
+  return (
+    <a
+      href={href} target="_blank" rel="noopener noreferrer"
+      className="relative aspect-square overflow-hidden rounded-[4px] bg-border/20"
+    >
+      <Image
+        src={imageSrc} alt={alt} fill
+        className="object-cover"
+        sizes="30vw"
+        quality={50}
+      />
+      {mediaType !== "IMAGE" && (
+        <div className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-full bg-black/50 px-2 py-1 text-white">
+          {mediaType === "VIDEO" ? <PlayIcon /> : <CarouselIcon />}
+        </div>
+      )}
+    </a>
+  );
+}
+
+/* Desktop PostCard: full framer-motion animations and hover effects */
+function DesktopPostCard({
   imageSrc, alt, href, mediaType, caption, timestamp, index,
 }: {
   imageSrc: string; alt: string; href: string;
@@ -103,15 +132,14 @@ function PostCard({
       <Image
         src={imageSrc} alt={alt} fill
         className="object-cover transition-transform duration-[350ms] ease-out group-hover:scale-[1.03]"
-        sizes="(max-width: 768px) 30vw, 18vw"
+        sizes="18vw"
         quality={60}
       />
       {mediaType !== "IMAGE" && (
-          <div className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-full bg-black/50 px-2 py-1 text-white">
+        <div className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-full bg-black/50 px-2 py-1 text-white">
           {mediaType === "VIDEO" ? <PlayIcon /> : <CarouselIcon />}
         </div>
       )}
-      {/* Hover overlay */}
       <AnimatePresence>
         {hovered && (
           <motion.div
@@ -140,6 +168,7 @@ function PostCard({
 }
 
 export default function ContentCreator() {
+  const isMobile = useIsMobile();
   const [posts, setPosts] = useState<InstagramPost[]>([]);
   const [profile, setProfile] = useState<InstagramProfile | null>(null);
   const [isLive, setIsLive] = useState(false);
@@ -151,7 +180,7 @@ export default function ContentCreator() {
         const data = await res.json();
         if (data.posts?.length > 0) {
           const isMob = window.matchMedia("(max-width: 768px)").matches;
-          setPosts(data.posts.slice(0, isMob ? 6 : 9));
+          setPosts(data.posts.slice(0, isMob ? 4 : 9));
           setIsLive(true);
         }
         if (data.profile) setProfile(data.profile);
@@ -159,6 +188,8 @@ export default function ContentCreator() {
     }
     fetchPosts();
   }, []);
+
+  const mobile = isMobile !== false;
 
   return (
     <section id="content" className="relative bg-bg-alt py-24 md:py-28">
@@ -180,7 +211,6 @@ export default function ContentCreator() {
                 <Image
                   src={profile?.profile_picture_url || "/images/hero/keyla-main.jpg"}
                   alt="Keyla Avila" fill className="object-cover" sizes="64px"
-                  unoptimized={false}
                 />
               </div>
               <div className="min-w-0 flex-1">
@@ -198,7 +228,6 @@ export default function ContentCreator() {
                   {isLive && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-terracotta/10 px-2 py-0.5 font-sans text-[9px] font-medium uppercase tracking-wider text-terracotta">
                       <span className="relative flex h-1.5 w-1.5">
-                        <span className="absolute hidden h-full w-full animate-ping rounded-full bg-terracotta/60 md:inline-flex" />
                         <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-terracotta" />
                       </span>
                       Live
@@ -236,21 +265,37 @@ export default function ContentCreator() {
           <div className="mx-auto mt-10 max-w-4xl">
             <div className="grid grid-cols-3 gap-2 md:gap-3">
               {isLive
-                ? posts.map((post, i) => (
-                    <PostCard
-                      key={post.id}
-                      imageSrc={post.media_type === "VIDEO" ? post.thumbnail_url || post.media_url : post.media_url}
-                      alt={post.caption?.slice(0, 100) || "Instagram post"}
-                      href={post.permalink} mediaType={post.media_type}
-                      caption={post.caption} timestamp={post.timestamp} index={i}
-                    />
-                  ))
-                : fallbackImages.map((img, i) => (
-                    <PostCard
-                      key={img.src} imageSrc={img.src} alt={img.alt}
-                      href="https://instagram.com/keylanavila" mediaType={img.type} index={i}
-                    />
-                  ))}
+                ? posts.map((post, i) =>
+                    mobile ? (
+                      <MobilePostCard
+                        key={post.id}
+                        imageSrc={post.media_type === "VIDEO" ? post.thumbnail_url || post.media_url : post.media_url}
+                        alt={post.caption?.slice(0, 100) || "Instagram post"}
+                        href={post.permalink} mediaType={post.media_type}
+                      />
+                    ) : (
+                      <DesktopPostCard
+                        key={post.id}
+                        imageSrc={post.media_type === "VIDEO" ? post.thumbnail_url || post.media_url : post.media_url}
+                        alt={post.caption?.slice(0, 100) || "Instagram post"}
+                        href={post.permalink} mediaType={post.media_type}
+                        caption={post.caption} timestamp={post.timestamp} index={i}
+                      />
+                    )
+                  )
+                : (mobile ? fallbackImages.slice(0, 4) : fallbackImages).map((img, i) =>
+                    mobile ? (
+                      <MobilePostCard
+                        key={img.src} imageSrc={img.src} alt={img.alt}
+                        href="https://instagram.com/keylanavila" mediaType={img.type}
+                      />
+                    ) : (
+                      <DesktopPostCard
+                        key={img.src} imageSrc={img.src} alt={img.alt}
+                        href="https://instagram.com/keylanavila" mediaType={img.type} index={i}
+                      />
+                    )
+                  )}
             </div>
             <div className="mt-8 text-center">
               <Button href="https://instagram.com/keylanavila" variant="text" arrowRight>

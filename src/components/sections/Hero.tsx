@@ -4,13 +4,97 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import Container from "@/components/ui/Container";
 import Button from "@/components/ui/Button";
+import { useIsMobile } from "@/lib/MobileProvider";
 
 const ease: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
-export default function Hero() {
+function HeroMobile() {
   return (
     <section className="relative h-screen min-h-[600px] w-full overflow-hidden">
-      {/* Full-bleed background image */}
+      <div className="absolute inset-0">
+        <Image
+          src="/images/hero/keyla-hero.jpg"
+          alt="Keyla Avila — Creator, trainer, and Pilates instructor"
+          fill
+          className="object-cover object-top"
+          priority
+          sizes="100vw"
+          quality={80}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10" />
+      </div>
+
+      <Container className="relative z-10 flex h-full flex-col justify-end pb-16 pt-32">
+        <div className="max-w-2xl">
+          <span className="mob-fade-in-up mb-5 inline-block font-sans text-[11px] font-medium uppercase tracking-[0.18em] text-white/70">
+            Creator · Trainer · Pilates Instructor
+          </span>
+
+          <h1 className="font-serif text-[2.8rem] font-light leading-[1.05] tracking-tight text-white">
+            <span className="mob-fade-in-up mob-delay-1 block">Movement,</span>
+            <span className="mob-fade-in-up mob-delay-2 block">Wellness &</span>
+            <span className="mob-fade-in-up mob-delay-3 block text-[3.2rem] italic text-terracotta">
+              Intention
+            </span>
+          </h1>
+
+          <p className="mob-fade-in-up mob-delay-4 mt-6 max-w-lg font-sans text-base font-light leading-relaxed text-white/70">
+            Certified personal trainer and Pilates instructor with a
+            kinesiology degree — creating content that moves, educates, and
+            inspires.
+          </p>
+
+          <div className="mob-fade-in-up mob-delay-5 mt-8 flex flex-wrap gap-4">
+            <Button href="#booking">Book Training</Button>
+            <a
+              href="#ugc"
+              className="inline-flex items-center justify-center gap-2 rounded-full border-[1.5px] border-white/40 px-8 py-4 font-sans text-[13px] font-medium uppercase tracking-[0.08em] text-white transition-all duration-250 hover:border-white hover:bg-white/10"
+            >
+              For Brands
+            </a>
+          </div>
+
+          <div className="mob-fade-in mob-delay-6 mt-10 flex flex-wrap items-center gap-3">
+            {[
+              { top: "B.S.", bottom: "Kinesiology" },
+              { top: "Certified", bottom: "Pilates Instructor" },
+              { top: "100K+", bottom: "Community" },
+            ].map((stat) => (
+              <div
+                key={stat.bottom}
+                className="flex flex-col rounded-md border border-white/15 bg-black/25 px-5 py-3"
+              >
+                <span className="font-serif text-lg font-medium text-white">
+                  {stat.top}
+                </span>
+                <span className="font-sans text-[10px] font-medium uppercase tracking-[0.1em] text-white/50">
+                  {stat.bottom}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Container>
+
+      <div className="absolute bottom-6 left-1/2 z-20 -translate-x-1/2">
+        <div
+          className="flex flex-col items-center gap-2"
+          style={{ animation: "pulse-subtle 2.5s ease-in-out infinite" }}
+        >
+          <span className="font-sans text-[10px] font-medium uppercase tracking-[0.2em] text-white/50">
+            Scroll
+          </span>
+          <div className="h-8 w-px bg-terracotta" />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function HeroDesktop() {
+  return (
+    <section className="relative h-screen min-h-[600px] w-full overflow-hidden">
       <motion.div
         className="absolute inset-0"
         initial={{ scale: 1.08 }}
@@ -26,13 +110,11 @@ export default function Hero() {
           sizes="100vw"
           quality={90}
         />
-        {/* Dark gradient overlay for text readability */}
         <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10" />
       </motion.div>
 
-      {/* Content */}
-      <Container className="relative z-10 flex h-full flex-col justify-end pb-16 pt-32 md:justify-center md:pb-20">
+      <Container className="relative z-10 flex h-full flex-col justify-center pb-20 pt-32">
         <div className="max-w-2xl">
           <motion.span
             className="mb-5 inline-block font-sans text-[11px] font-medium uppercase tracking-[0.18em] text-white/70"
@@ -44,7 +126,7 @@ export default function Hero() {
           </motion.span>
 
           <motion.h1
-            className="font-serif text-[2.8rem] font-light leading-[1.05] tracking-tight text-white md:text-[4rem] lg:text-[5rem]"
+            className="font-serif text-[4rem] font-light leading-[1.05] tracking-tight text-white lg:text-[5rem]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.4, ease }}
@@ -66,7 +148,7 @@ export default function Hero() {
               Wellness &
             </motion.span>
             <motion.span
-              className="block text-[3.2rem] italic text-terracotta md:text-[4.5rem] lg:text-[5.6rem]"
+              className="block text-[4.5rem] italic text-terracotta lg:text-[5.6rem]"
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.75, ease }}
@@ -86,7 +168,6 @@ export default function Hero() {
             inspires.
           </motion.p>
 
-          {/* CTA Buttons */}
           <motion.div
             className="mt-8 flex flex-wrap gap-4"
             initial={{ opacity: 0, y: 20 }}
@@ -102,7 +183,6 @@ export default function Hero() {
             </a>
           </motion.div>
 
-          {/* Credential stat cards */}
           <motion.div
             className="mt-10 flex flex-wrap items-center gap-3"
             initial={{ opacity: 0 }}
@@ -116,7 +196,7 @@ export default function Hero() {
             ].map((stat) => (
               <div
                 key={stat.bottom}
-                className="flex flex-col rounded-md border border-white/15 bg-black/25 px-5 py-3 transition-colors duration-300 hover:bg-black/35 md:bg-white/5 md:backdrop-blur-sm md:hover:bg-white/10"
+                className="flex flex-col rounded-md border border-white/15 bg-white/5 px-5 py-3 backdrop-blur-sm transition-colors duration-300 hover:bg-white/10"
               >
                 <span className="font-serif text-lg font-medium text-white md:text-xl">
                   {stat.top}
@@ -130,7 +210,6 @@ export default function Hero() {
         </div>
       </Container>
 
-      {/* Scroll indicator — bottom center */}
       <motion.div
         className="absolute bottom-6 left-1/2 z-20 -translate-x-1/2"
         initial={{ opacity: 0 }}
@@ -150,4 +229,11 @@ export default function Hero() {
       </motion.div>
     </section>
   );
+}
+
+export default function Hero() {
+  const isMobile = useIsMobile();
+
+  if (isMobile !== false) return <HeroMobile />;
+  return <HeroDesktop />;
 }

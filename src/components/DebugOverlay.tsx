@@ -22,13 +22,11 @@ export default function DebugOverlay() {
     function logPerf() {
       const nodes = document.querySelectorAll("*").length;
       const imgs = document.querySelectorAll("img").length;
+      const loadedImgs = document.querySelectorAll("img[src]:not([src=''])").length;
       const videos = document.querySelectorAll("video").length;
-      const canvases = document.querySelectorAll("canvas").length;
-      const observers = (window as unknown as Record<string, unknown>)
-        .__debugObserverCount;
+      const motionEls = document.querySelectorAll("[style*=transform],[style*=opacity]").length;
       console.log(
-        `[DEBUG] DOM=${nodes} img=${imgs} video=${videos} canvas=${canvases}` +
-          (observers != null ? ` observers=${observers}` : "")
+        `[DEBUG] DOM=${nodes} img=${imgs}(loaded:${loadedImgs}) video=${videos} motionStyled=${motionEls}`
       );
 
       const perf = performance as unknown as {

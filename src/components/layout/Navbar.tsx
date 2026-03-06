@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Container from "@/components/ui/Container";
+import { useIsMobile } from "@/lib/MobileProvider";
 
 const navLinks = [
   { label: "About", href: "#about" },
@@ -37,7 +38,109 @@ const socialLinks = [
   },
 ];
 
-export default function Navbar() {
+/* Mobile Navbar: zero framer-motion, CSS transitions only */
+function NavbarMobile() {
+  const [scrolled, setScrolled] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [mobileOpen]);
+
+  return (
+    <>
+      <header
+        className={`mob-slide-down fixed top-0 left-0 z-50 w-full transition-all duration-500 ${
+          scrolled
+            ? "bg-bg shadow-[0_1px_0_0_rgba(0,0,0,0.04)]"
+            : "bg-transparent"
+        }`}
+      >
+        <Container className="flex items-center justify-between py-4">
+          <a href="#" className="relative block h-10 w-28">
+            <Image
+              src="/final keyla logo.png"
+              alt="Keyla Avila"
+              fill
+              className="object-contain"
+              sizes="128px"
+              priority
+            />
+          </a>
+
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="relative z-50 flex h-10 w-10 flex-col items-center justify-center gap-1.5"
+            aria-label="Toggle menu"
+          >
+            <span
+              className={`block h-[1.5px] w-6 bg-text transition-all duration-300 ${mobileOpen ? "translate-y-[4.5px] rotate-45" : ""}`}
+            />
+            <span
+              className={`block h-[1.5px] w-6 bg-text transition-opacity duration-200 ${mobileOpen ? "opacity-0" : ""}`}
+            />
+            <span
+              className={`block h-[1.5px] w-6 bg-text transition-all duration-300 ${mobileOpen ? "-translate-y-[4.5px] -rotate-45" : ""}`}
+            />
+          </button>
+        </Container>
+      </header>
+
+      {/* Mobile menu overlay — CSS transition */}
+      <div
+        className={`fixed inset-0 z-40 flex flex-col items-center justify-center bg-bg transition-all duration-300 ${
+          mobileOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      >
+        <nav className="flex flex-col items-center gap-8">
+          {navLinks.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              onClick={() => setMobileOpen(false)}
+              className="font-serif text-3xl font-light text-text"
+            >
+              {link.label}
+            </a>
+          ))}
+
+          <div className="flex items-center gap-5">
+            {socialLinks.map((social) => (
+              <a
+                key={social.label}
+                href={social.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={social.label}
+                className="text-text/70 transition-colors duration-200 hover:text-terracotta"
+              >
+                {social.icon}
+              </a>
+            ))}
+          </div>
+
+          <a
+            href="#booking"
+            onClick={() => setMobileOpen(false)}
+            className="mt-2 inline-flex items-center justify-center rounded-full bg-text px-8 py-4 font-sans text-[13px] font-medium uppercase tracking-[0.08em] text-bg transition-colors hover:bg-terracotta"
+          >
+            Work With Me
+          </a>
+        </nav>
+      </div>
+    </>
+  );
+}
+
+/* Desktop Navbar: full framer-motion animations */
+function NavbarDesktop() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -57,7 +160,7 @@ export default function Navbar() {
       <motion.header
         className={`fixed top-0 left-0 z-50 w-full transition-all duration-500 ${
           scrolled
-            ? "bg-bg shadow-[0_1px_0_0_rgba(0,0,0,0.04)] md:bg-bg/90 md:backdrop-blur-md"
+            ? "bg-bg/90 backdrop-blur-md shadow-[0_1px_0_0_rgba(0,0,0,0.04)]"
             : "bg-transparent"
         }`}
         initial={{ y: -100 }}
@@ -88,7 +191,6 @@ export default function Navbar() {
             ))}
           </nav>
 
-          {/* Social icons + CTA */}
           <div className="hidden items-center lg:flex">
             <div className="flex items-center gap-4">
               {socialLinks.map((social) => (
@@ -161,7 +263,6 @@ export default function Navbar() {
                 </motion.a>
               ))}
 
-              {/* Mobile social icons */}
               <motion.div
                 className="flex items-center gap-5"
                 initial={{ opacity: 0, y: 20 }}
@@ -200,4 +301,11 @@ export default function Navbar() {
       </AnimatePresence>
     </>
   );
+}
+
+export default function Navbar() {
+  const isMobile = useIsMobile();
+
+  if (isMobile !== false) return <NavbarMobile />;
+  return <NavbarDesktop />;
 }

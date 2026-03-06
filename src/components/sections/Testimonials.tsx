@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Container from "@/components/ui/Container";
 import SectionHeading from "@/components/ui/SectionHeading";
 import ScrollReveal from "@/components/ui/ScrollReveal";
+import { useIsMobile } from "@/lib/MobileProvider";
 
 const testimonials = [
   {
@@ -29,8 +30,124 @@ const testimonials = [
   },
 ];
 
-export default function Testimonials() {
+function TestimonialsMobile() {
   const [active, setActive] = useState(0);
+
+  return (
+    <div className="relative mx-auto mt-20 max-w-3xl text-center">
+      <span className="mb-8 block font-serif text-6xl text-terracotta/30">
+        &ldquo;
+      </span>
+
+      <div className="relative min-h-[180px]">
+        <blockquote className="font-serif text-xl font-light leading-[1.6] text-text transition-opacity duration-400">
+          {testimonials[active].quote}
+        </blockquote>
+      </div>
+
+      <div className="mt-8 transition-opacity duration-300">
+        <span className="font-sans text-sm font-medium text-text">
+          {testimonials[active].name}
+        </span>
+        <span className="mx-2 text-border">·</span>
+        <span className="font-sans text-sm font-light text-text-muted">
+          {testimonials[active].context}
+        </span>
+      </div>
+
+      <div className="mt-10 flex items-center justify-center gap-3">
+        {testimonials.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setActive(i)}
+            aria-label={`View testimonial ${i + 1}`}
+            className="group relative flex h-8 items-center justify-center"
+          >
+            <span
+              className={`block rounded-full transition-all duration-300 ${
+                i === active
+                  ? "h-2 w-6 bg-terracotta"
+                  : "h-2 w-2 bg-blush group-hover:bg-terracotta/40"
+              }`}
+            />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TestimonialsDesktop() {
+  const [active, setActive] = useState(0);
+
+  return (
+    <div className="relative mx-auto mt-20 max-w-3xl">
+      <ScrollReveal>
+        <div className="text-center">
+          <span className="mb-8 block font-serif text-6xl text-terracotta/30">
+            &ldquo;
+          </span>
+
+          <div className="relative min-h-[140px]">
+            <AnimatePresence mode="wait">
+              <motion.blockquote
+                key={active}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                className="font-serif text-2xl font-light leading-[1.6] text-text"
+              >
+                {testimonials[active].quote}
+              </motion.blockquote>
+            </AnimatePresence>
+          </div>
+
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={active}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="mt-8"
+            >
+              <span className="font-sans text-sm font-medium text-text">
+                {testimonials[active].name}
+              </span>
+              <span className="mx-2 text-border">·</span>
+              <span className="font-sans text-sm font-light text-text-muted">
+                {testimonials[active].context}
+              </span>
+            </motion.div>
+          </AnimatePresence>
+
+          <div className="mt-10 flex items-center justify-center gap-3">
+            {testimonials.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setActive(i)}
+                aria-label={`View testimonial ${i + 1}`}
+                className="group relative flex h-8 items-center justify-center"
+              >
+                <span
+                  className={`block rounded-full transition-all duration-300 ${
+                    i === active
+                      ? "h-2 w-6 bg-terracotta"
+                      : "h-2 w-2 bg-blush group-hover:bg-terracotta/40"
+                  }`}
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+      </ScrollReveal>
+    </div>
+  );
+}
+
+export default function Testimonials() {
+  const isMobile = useIsMobile();
 
   return (
     <section id="testimonials" className="bg-bg py-24 md:py-28">
@@ -41,69 +158,7 @@ export default function Testimonials() {
           subtitle="Real experiences from the women and brands I've had the privilege to work with."
         />
 
-        <div className="relative mx-auto mt-20 max-w-3xl">
-          <ScrollReveal>
-            <div className="text-center">
-              <span className="mb-8 block font-serif text-6xl text-terracotta/30">
-                &ldquo;
-              </span>
-
-              <div className="relative min-h-[180px] md:min-h-[140px]">
-                <AnimatePresence mode="wait">
-                  <motion.blockquote
-                    key={active}
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -15 }}
-                    transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                    className="font-serif text-xl font-light leading-[1.6] text-text md:text-2xl"
-                  >
-                    {testimonials[active].quote}
-                  </motion.blockquote>
-                </AnimatePresence>
-              </div>
-
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={active}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="mt-8"
-                >
-                  <span className="font-sans text-sm font-medium text-text">
-                    {testimonials[active].name}
-                  </span>
-                  <span className="mx-2 text-border">·</span>
-                  <span className="font-sans text-sm font-light text-text-muted">
-                    {testimonials[active].context}
-                  </span>
-                </motion.div>
-              </AnimatePresence>
-
-              {/* Dots — active is pill, inactive is circle */}
-              <div className="mt-10 flex items-center justify-center gap-3">
-                {testimonials.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setActive(i)}
-                    aria-label={`View testimonial ${i + 1}`}
-                    className="group relative flex h-8 items-center justify-center"
-                  >
-                    <span
-                      className={`block rounded-full transition-all duration-300 ${
-                        i === active
-                          ? "h-2 w-6 bg-terracotta"
-                          : "h-2 w-2 bg-blush group-hover:bg-terracotta/40"
-                      }`}
-                    />
-                  </button>
-                ))}
-              </div>
-            </div>
-          </ScrollReveal>
-        </div>
+        {isMobile !== false ? <TestimonialsMobile /> : <TestimonialsDesktop />}
       </Container>
     </section>
   );
