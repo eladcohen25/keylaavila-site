@@ -18,7 +18,7 @@ export default function Hero() {
         transition={{ duration: 1.6, ease }}
       >
         <Image
-          src="/images/hero/keyla-main.jpg"
+          src="/images/hero/keyla-hero.jpg"
           alt="Keyla Avila — Creator, trainer, and Pilates instructor"
           fill
           className="object-cover object-top"
