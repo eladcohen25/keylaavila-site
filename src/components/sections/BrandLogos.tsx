@@ -84,7 +84,7 @@ function MobileLogoGrid() {
 }
 
 export default function BrandLogos() {
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState<boolean | null>(null);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 768px)");
@@ -93,6 +93,10 @@ export default function BrandLogos() {
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
   }, []);
+
+  if (isMobile === null) {
+    return <section className="relative bg-bg-alt pt-14 pb-24"><div style={{ minHeight: 300 }} /></section>;
+  }
 
   return (
     <section className="relative bg-bg-alt pt-14 pb-24 md:pt-16 md:pb-28">

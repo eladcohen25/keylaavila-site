@@ -114,7 +114,7 @@ function DesktopCard({ card }: { card: (typeof cards)[number] }) {
 }
 
 export default function UGCPortfolio() {
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState<boolean | null>(null);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 768px)");
@@ -123,6 +123,10 @@ export default function UGCPortfolio() {
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
   }, []);
+
+  if (isMobile === null) {
+    return <section id="ugc" className="bg-bg pt-24 pb-12 md:pt-28 md:pb-14"><div style={{ minHeight: 400 }} /></section>;
+  }
 
   const mobileCards = cards.slice(0, 6);
   const desktopCards = [...cards, ...cards];

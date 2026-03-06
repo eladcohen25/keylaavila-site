@@ -37,7 +37,7 @@ export default function Gallery() {
     offset: ["start end", "end start"],
   });
 
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState<boolean | null>(null);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 768px)");
@@ -50,6 +50,10 @@ export default function Gallery() {
   const col1Y = useTransform(scrollYProgress, [0, 1], [0, -30]);
   const col2Y = useTransform(scrollYProgress, [0, 1], [0, 20]);
   const col3Y = useTransform(scrollYProgress, [0, 1], [0, -15]);
+
+  if (isMobile === null) {
+    return <section id="gallery" className="relative bg-bg-alt py-24"><div style={{ minHeight: 500 }} /></section>;
+  }
 
   const items = isMobile ? galleryItems.slice(0, 10) : galleryItems;
 
