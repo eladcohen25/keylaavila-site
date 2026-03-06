@@ -26,6 +26,8 @@ const logos = [
 export default function BrandLogos() {
   return (
     <section className="relative bg-bg-alt pt-14 pb-24 md:pt-16 md:pb-28">
+      {/* MOBILE: entire section hidden for crash debugging — remove "hidden md:block" to re-enable */}
+      <div className="hidden md:block">
       <Container className="relative z-10">
         <SectionHeading title="Trusted By" />
 
@@ -79,6 +81,7 @@ export default function BrandLogos() {
           </p>
         </ScrollReveal>
       </Container>
+      </div>
     </section>
   );
 }

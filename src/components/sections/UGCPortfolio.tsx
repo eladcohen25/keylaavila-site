@@ -59,6 +59,8 @@ export default function UGCPortfolio() {
 
   return (
     <section id="ugc" className="bg-bg pt-24 pb-12 md:pt-28 md:pb-14">
+      {/* MOBILE: entire section hidden for crash debugging — re-enable by removing "hidden md:block" wrapper */}
+      <div className="hidden md:block">
       <Container>
         <SectionHeading
           label="UGC & Content"
@@ -66,12 +68,12 @@ export default function UGCPortfolio() {
           subtitle="Real content for real audiences — built on expertise, not just aesthetics."
         />
       </Container>
+      </div>
 
       {/*
-        MOBILE: plain CSS grid of text cards. No images, no JS animation,
-        no framer-motion, no dynamic state. Pure HTML/CSS via Tailwind.
+        MOBILE: hidden for crash debugging
       */}
-      <div className="mt-10 px-5 md:hidden">
+      <div className="mt-10 px-5 hidden">
         <div className="grid grid-cols-2 gap-3">
           {mobileCards.map((card, i) => (
             <a
