@@ -184,6 +184,108 @@ function MobServices() {
   );
 }
 
+/* ─── UGC PORTFOLIO ─── */
+const categoryColors: Record<string, string> = {
+  "UGC VIDEO": "bg-terracotta",
+  "BRAND COLLAB": "bg-olive",
+  "WEDDING": "bg-burgundy",
+  "EVENT": "bg-burgundy",
+  "MODELING": "bg-text",
+  "TRAVEL": "bg-olive",
+};
+
+const ugcCards = [
+  { type: "UGC VIDEO", brand: "Hustle & Heart — Skincare", href: "https://www.instagram.com/reels/DRH_u2UjXdK/", thumbnail: "/images/ugc/hustle-skincare.jpg" },
+  { type: "WEDDING", brand: "Wedding Content — Tory Cooper", href: "https://www.instagram.com/reels/DU2QzdBDEyG/", thumbnail: "/images/ugc/wedding-torycooper.jpg" },
+  { type: "BRAND COLLAB", brand: "Reebok — Smart Ring", href: "https://www.instagram.com/reels/DVUY5XYDrq2/", thumbnail: "/images/ugc/reebok-smartring.jpg" },
+  { type: "BRAND COLLAB", brand: "Etho Wellness Club", href: "https://www.tiktok.com/@keylanavilaa/video/7599898730539584798", thumbnail: "/images/ugc/etho-wellness.jpg" },
+  { type: "WEDDING", brand: "Luxury Wedding — Tory Cooper", href: "https://www.instagram.com/reels/DU4qTJyjNWl/", thumbnail: "/images/ugc/wedding-tory2.jpg" },
+  { type: "MODELING", brand: "F1 — Las Vegas Campaign", href: "https://www.instagram.com/p/CxYnEVwvqA3/?img_index=2", thumbnail: "/images/ugc/f1-lasvegas.jpg" },
+  { type: "BRAND COLLAB", brand: "Dry Bar — Beauty Salon", href: "https://www.tiktok.com/@keylanavilaa/video/7561932699489865015", thumbnail: "/images/ugc/drybar-salon.jpg" },
+  { type: "WEDDING", brand: "Luxury Wedding — Tory Cooper", href: "https://www.instagram.com/reels/DQZ1S6gknsi/", thumbnail: "/images/ugc/wedding-tory3.jpg" },
+  { type: "BRAND COLLAB", brand: "Lululemon — Store Grand Opening", href: "https://www.instagram.com/reels/DORdqxCkm-8/", thumbnail: "/images/ugc/lululemon-opening.jpg" },
+  { type: "TRAVEL", brand: "Visit Costa Rica", href: "https://www.tiktok.com/@keylanavilaa/video/7503013218017922350", thumbnail: "/images/ugc/costarica1.jpg" },
+  { type: "BRAND COLLAB", brand: "Coffee & Chill x Etho Wellness", href: "https://www.tiktok.com/@keylanavilaa/video/7560572700029160717", thumbnail: "/images/ugc/coffee-etho.jpg" },
+  { type: "UGC VIDEO", brand: "Hustle & Heart — Vegan Collagen Jelly", href: "https://www.instagram.com/reels/DRAN6JjDXYs/", thumbnail: "/images/ugc/hustle-collagen.jpg" },
+  { type: "BRAND COLLAB", brand: "Kennetik — Beverage Company", href: "https://www.tiktok.com/@keylanavilaa/video/7540049268451626253", thumbnail: "/images/ugc/kennetik-beverage.jpg" },
+  { type: "BRAND COLLAB", brand: "TruFusion Collab", href: "https://www.tiktok.com/@keylanavilaa/video/7537072766026026295", thumbnail: "/images/ugc/trufusion.jpg" },
+  { type: "EVENT", brand: "Luxury Event — Tory Cooper", href: "https://www.instagram.com/reels/DH2Asz0ysxV/", thumbnail: "/images/ugc/event-tory7.jpg" },
+  { type: "TRAVEL", brand: "Visit Costa Rica", href: "https://www.tiktok.com/@keylanavilaa/video/7497739688090897710", thumbnail: "/images/ugc/costarica2.jpg" },
+  { type: "BRAND COLLAB", brand: "One Percent Collab", href: "https://www.tiktok.com/@keylanavilaa/video/7525917584949136695", thumbnail: "/images/ugc/one-percent.jpg" },
+  { type: "BRAND COLLAB", brand: "Jobee Swim", href: "https://www.tiktok.com/@keylanavilaa/video/7393854410738355502", thumbnail: "/images/ugc/jobee-swim.jpg" },
+];
+
+const marqueeCards = [...ugcCards, ...ugcCards];
+
+function MobUGC() {
+  return (
+    <section id="ugc" className="bg-bg pt-24 pb-12">
+      <div className={CONTAINER}>
+        <Heading
+          label="UGC & Content"
+          title="Content That Converts"
+          subtitle="Real content for real audiences — built on expertise, not just aesthetics."
+        />
+      </div>
+
+      <div
+        className="relative mt-12 overflow-hidden"
+        style={{
+          maskImage: "linear-gradient(to right, transparent, black 4%, black 96%, transparent)",
+          WebkitMaskImage: "linear-gradient(to right, transparent, black 4%, black 96%, transparent)",
+        }}
+      >
+        <div
+          className="flex w-max items-center gap-3 pl-3"
+          style={{ animation: "marquee 50s linear infinite" }}
+        >
+          {marqueeCards.map((card, i) => {
+            const pillColor = categoryColors[card.type] || "bg-terracotta";
+            return (
+              <a
+                key={i}
+                href={card.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="relative h-[260px] w-[180px] flex-shrink-0 overflow-hidden rounded-xl bg-text/5"
+              >
+                <Image
+                  src={card.thumbnail}
+                  alt={card.brand}
+                  fill
+                  className="object-cover"
+                  sizes="180px"
+                  quality={50}
+                />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/30 text-white/80">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                      <polygon points="6 3 20 12 6 21 6 3" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-3 pt-12">
+                  <span className={cn("mb-1.5 inline-block rounded-full px-2.5 py-0.5 font-sans text-[8px] font-medium uppercase tracking-[0.1em] text-bg", pillColor)}>
+                    {card.type}
+                  </span>
+                  <p className="font-sans text-[12px] font-medium leading-snug text-white/90">{card.brand}</p>
+                </div>
+              </a>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className={cn(CONTAINER, "mt-8")}>
+        <p className="text-center font-sans text-sm font-light text-text-muted">
+          More content available upon request —{" "}
+          <a href="#booking" className="font-medium text-terracotta">Get in Touch →</a>
+        </p>
+      </div>
+    </section>
+  );
+}
+
 /* ─── CONTENT CREATOR (Instagram Feed) ─── */
 function MobContentCreator() {
   const [posts, setPosts] = useState<InstagramPost[]>([]);
@@ -510,6 +612,7 @@ export default function MobilePage() {
         <MobHero />
         <MobAbout />
         <MobServices />
+        <MobUGC />
         <MobContentCreator />
         <MobCredentials />
         <MobTestimonials />
