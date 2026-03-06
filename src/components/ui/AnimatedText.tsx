@@ -2,6 +2,7 @@
 
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
+import { useIsMobile } from "@/lib/MobileProvider";
 
 interface AnimatedTextProps {
   text: string;
@@ -13,7 +14,7 @@ interface AnimatedTextProps {
   once?: boolean;
 }
 
-export default function AnimatedText({
+function AnimatedTextDesktop({
   text,
   as: Tag = "h2",
   className = "",
@@ -70,4 +71,16 @@ export default function AnimatedText({
       </Tag>
     </motion.div>
   );
+}
+
+export default function AnimatedText(props: AnimatedTextProps) {
+  const isMobile = useIsMobile();
+  const Tag = props.as || "h2";
+
+  // Mobile or initial SSR: render plain text, no observer, no stagger animation
+  if (isMobile !== false) {
+    return <Tag className={props.className}>{props.text}</Tag>;
+  }
+
+  return <AnimatedTextDesktop {...props} />;
 }

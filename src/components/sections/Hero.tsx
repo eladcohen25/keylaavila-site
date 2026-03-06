@@ -116,7 +116,7 @@ export default function Hero() {
             ].map((stat) => (
               <div
                 key={stat.bottom}
-                className="flex flex-col rounded-md border border-white/15 bg-white/5 px-5 py-3 backdrop-blur-sm transition-colors duration-300 hover:bg-white/10"
+                className="flex flex-col rounded-md border border-white/15 bg-black/25 px-5 py-3 transition-colors duration-300 hover:bg-black/35 md:bg-white/5 md:backdrop-blur-sm md:hover:bg-white/10"
               >
                 <span className="font-serif text-lg font-medium text-white md:text-xl">
                   {stat.top}

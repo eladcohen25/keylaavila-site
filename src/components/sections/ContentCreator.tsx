@@ -180,7 +180,7 @@ export default function ContentCreator() {
                 <Image
                   src={profile?.profile_picture_url || "/images/hero/keyla-main.jpg"}
                   alt="Keyla Avila" fill className="object-cover" sizes="64px"
-                  unoptimized={!!profile?.profile_picture_url}
+                  unoptimized={false}
                 />
               </div>
               <div className="min-w-0 flex-1">
@@ -198,7 +198,7 @@ export default function ContentCreator() {
                   {isLive && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-terracotta/10 px-2 py-0.5 font-sans text-[9px] font-medium uppercase tracking-wider text-terracotta">
                       <span className="relative flex h-1.5 w-1.5">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-terracotta/60" />
+                        <span className="absolute hidden h-full w-full animate-ping rounded-full bg-terracotta/60 md:inline-flex" />
                         <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-terracotta" />
                       </span>
                       Live

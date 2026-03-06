@@ -7,8 +7,10 @@ import Container from "@/components/ui/Container";
 import SectionHeading from "@/components/ui/SectionHeading";
 import ScrollReveal from "@/components/ui/ScrollReveal";
 import Button from "@/components/ui/Button";
+import { useIsMobile } from "@/lib/MobileProvider";
 
 export default function About() {
+  const isMobile = useIsMobile();
   const sectionRef = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({
     target: sectionRef,
@@ -16,6 +18,21 @@ export default function About() {
   });
 
   const imageY = useTransform(scrollYProgress, [0, 1], [40, -40]);
+
+  const imageContent = (
+    <>
+      <div className="relative aspect-[3/4] overflow-hidden rounded-xl shadow-[8px_8px_40px_rgba(100,60,40,0.12)]">
+        <Image
+          src="/images/lifestyle/main-photo.jpg"
+          alt="Keyla Avila — editorial portrait"
+          fill
+          className="object-cover"
+          sizes="(max-width: 768px) 90vw, 40vw"
+        />
+      </div>
+      <div className="absolute -bottom-6 -right-6 -z-10 h-full w-full rounded-xl bg-blush/50" />
+    </>
+  );
 
   return (
     <section
@@ -28,18 +45,13 @@ export default function About() {
           {/* Image Column */}
           <div className="lg:col-span-5">
             <ScrollReveal direction="left">
-              <motion.div className="relative" style={{ y: imageY }}>
-                <div className="relative aspect-[3/4] overflow-hidden rounded-xl shadow-[8px_8px_40px_rgba(100,60,40,0.12)]">
-                  <Image
-                    src="/images/lifestyle/main-photo.jpg"
-                    alt="Keyla Avila — editorial portrait"
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 90vw, 40vw"
-                  />
-                </div>
-                <div className="absolute -bottom-6 -right-6 -z-10 h-full w-full rounded-xl bg-blush/50" />
-              </motion.div>
+              {isMobile !== false ? (
+                <div className="relative">{imageContent}</div>
+              ) : (
+                <motion.div className="relative" style={{ y: imageY }}>
+                  {imageContent}
+                </motion.div>
+              )}
             </ScrollReveal>
           </div>
 
@@ -52,7 +64,6 @@ export default function About() {
             />
 
             <div className="mt-10 space-y-6">
-              {/* First paragraph with terracotta left border */}
               <ScrollReveal delay={0.15}>
                 <p className="border-l-[3px] border-terracotta pl-5 font-sans text-base font-light leading-[1.8] text-text/80">
                   I&apos;m Keyla — a certified personal trainer, Pilates
@@ -83,7 +94,6 @@ export default function About() {
               </ScrollReveal>
             </div>
 
-            {/* Credential Highlights with terracotta dots */}
             <ScrollReveal delay={0.45}>
               <div className="mt-10 grid grid-cols-2 gap-6 border-t border-border/40 pt-10">
                 <div className="flex items-start gap-3">

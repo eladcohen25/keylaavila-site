@@ -79,7 +79,7 @@ export default function Credentials() {
         <div className="mt-20 grid gap-6 md:grid-cols-2">
           {credentials.map((cred, i) => (
             <ScrollReveal key={cred.title} delay={i * 0.08}>
-              <div className="rounded-[10px] border border-terracotta/15 bg-bg/80 p-6 backdrop-blur-sm transition-all duration-300 ease-out hover:-translate-y-1 hover:border-terracotta hover:shadow-[0_12px_36px_rgba(100,60,40,0.1)]">
+              <div className="rounded-[10px] border border-terracotta/15 bg-bg p-6 transition-all duration-300 ease-out hover:-translate-y-1 hover:border-terracotta hover:shadow-[0_12px_36px_rgba(100,60,40,0.1)] md:bg-bg/80 md:backdrop-blur-sm">
                 <span className="text-2xl">{cred.icon}</span>
                 <h3 className="mt-4 font-serif text-xl font-medium tracking-[-0.01em] text-text md:text-2xl">
                   {cred.title}

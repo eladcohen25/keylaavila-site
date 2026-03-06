@@ -1,3 +1,4 @@
+import MobileProvider from "@/lib/MobileProvider";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Hero from "@/components/sections/Hero";
@@ -12,10 +13,12 @@ import Gallery from "@/components/sections/Gallery";
 import Booking from "@/components/sections/Booking";
 import FAQ from "@/components/sections/FAQ";
 import ShopLinks from "@/components/sections/ShopLinks";
+import DebugOverlay from "@/components/DebugOverlay";
 
 export default function Home() {
   return (
-    <>
+    <MobileProvider>
+      <DebugOverlay />
       <Navbar />
       <main>
         <Hero />
@@ -32,6 +35,6 @@ export default function Home() {
         <ShopLinks />
       </main>
       <Footer />
-    </>
+    </MobileProvider>
   );
 }

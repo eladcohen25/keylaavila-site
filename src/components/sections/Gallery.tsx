@@ -6,6 +6,7 @@ import Image from "next/image";
 import Container from "@/components/ui/Container";
 import SectionHeading from "@/components/ui/SectionHeading";
 import ScrollReveal from "@/components/ui/ScrollReveal";
+import { useIsMobile } from "@/lib/MobileProvider";
 
 const galleryItems = [
   { id: 1, src: "/images/lifestyle/editorial-standing.jpg", alt: "Editorial portrait — standing", aspect: "aspect-[3/4]" },
@@ -40,6 +41,7 @@ const col1Mobile = mobileItems.filter((_, i) => i % 2 === 0);
 const col2Mobile = mobileItems.filter((_, i) => i % 2 === 1);
 
 export default function Gallery() {
+  const isMobile = useIsMobile();
   const sectionRef = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({
     target: sectionRef,
@@ -78,53 +80,55 @@ export default function Gallery() {
           </div>
         </div>
 
-        {/* Desktop: 3-column parallax masonry */}
-        <div className="mt-20 hidden grid-cols-3 gap-4 md:grid">
-          <motion.div className="flex flex-col gap-4" style={{ y: col1Y }}>
-            {col1All.map((item, i) => (
-              <ScrollReveal key={item.id} delay={i * 0.06}>
-                <div className={`group relative ${item.aspect} cursor-pointer overflow-hidden rounded-[4px]`}>
-                  <Image
-                    src={item.src} alt={item.alt} fill
-                    className="object-cover transition-all duration-[350ms] ease-out group-hover:scale-[1.02]"
-                    sizes="33vw" quality={75}
-                  />
-                  <div className="absolute inset-0 bg-text/0 transition-all duration-[350ms] group-hover:bg-text/5 group-hover:shadow-[0_8px_30px_rgba(100,60,40,0.15)]" />
-                </div>
-              </ScrollReveal>
-            ))}
-          </motion.div>
+        {/* Desktop: 3-column parallax masonry — only rendered when confirmed desktop */}
+        {isMobile === false && (
+          <div className="mt-20 hidden grid-cols-3 gap-4 md:grid">
+            <motion.div className="flex flex-col gap-4" style={{ y: col1Y }}>
+              {col1All.map((item, i) => (
+                <ScrollReveal key={item.id} delay={i * 0.06}>
+                  <div className={`group relative ${item.aspect} cursor-pointer overflow-hidden rounded-[4px]`}>
+                    <Image
+                      src={item.src} alt={item.alt} fill
+                      className="object-cover transition-all duration-[350ms] ease-out group-hover:scale-[1.02]"
+                      sizes="33vw" quality={75}
+                    />
+                    <div className="absolute inset-0 bg-text/0 transition-all duration-[350ms] group-hover:bg-text/5 group-hover:shadow-[0_8px_30px_rgba(100,60,40,0.15)]" />
+                  </div>
+                </ScrollReveal>
+              ))}
+            </motion.div>
 
-          <motion.div className="flex flex-col gap-4 pt-12" style={{ y: col2Y }}>
-            {col2All.map((item, i) => (
-              <ScrollReveal key={item.id} delay={i * 0.06 + 0.03}>
-                <div className={`group relative ${item.aspect} cursor-pointer overflow-hidden rounded-[4px]`}>
-                  <Image
-                    src={item.src} alt={item.alt} fill
-                    className="object-cover transition-all duration-[350ms] ease-out group-hover:scale-[1.02]"
-                    sizes="33vw" quality={75}
-                  />
-                  <div className="absolute inset-0 bg-text/0 transition-all duration-[350ms] group-hover:bg-text/5 group-hover:shadow-[0_8px_30px_rgba(100,60,40,0.15)]" />
-                </div>
-              </ScrollReveal>
-            ))}
-          </motion.div>
+            <motion.div className="flex flex-col gap-4 pt-12" style={{ y: col2Y }}>
+              {col2All.map((item, i) => (
+                <ScrollReveal key={item.id} delay={i * 0.06 + 0.03}>
+                  <div className={`group relative ${item.aspect} cursor-pointer overflow-hidden rounded-[4px]`}>
+                    <Image
+                      src={item.src} alt={item.alt} fill
+                      className="object-cover transition-all duration-[350ms] ease-out group-hover:scale-[1.02]"
+                      sizes="33vw" quality={75}
+                    />
+                    <div className="absolute inset-0 bg-text/0 transition-all duration-[350ms] group-hover:bg-text/5 group-hover:shadow-[0_8px_30px_rgba(100,60,40,0.15)]" />
+                  </div>
+                </ScrollReveal>
+              ))}
+            </motion.div>
 
-          <motion.div className="flex flex-col gap-4 pt-6" style={{ y: col3Y }}>
-            {col3All.map((item, i) => (
-              <ScrollReveal key={item.id} delay={i * 0.06 + 0.06}>
-                <div className={`group relative ${item.aspect} cursor-pointer overflow-hidden rounded-[4px]`}>
-                  <Image
-                    src={item.src} alt={item.alt} fill
-                    className="object-cover transition-all duration-[350ms] ease-out group-hover:scale-[1.02]"
-                    sizes="33vw" quality={75}
-                  />
-                  <div className="absolute inset-0 bg-text/0 transition-all duration-[350ms] group-hover:bg-text/5 group-hover:shadow-[0_8px_30px_rgba(100,60,40,0.15)]" />
-                </div>
-              </ScrollReveal>
-            ))}
-          </motion.div>
-        </div>
+            <motion.div className="flex flex-col gap-4 pt-6" style={{ y: col3Y }}>
+              {col3All.map((item, i) => (
+                <ScrollReveal key={item.id} delay={i * 0.06 + 0.06}>
+                  <div className={`group relative ${item.aspect} cursor-pointer overflow-hidden rounded-[4px]`}>
+                    <Image
+                      src={item.src} alt={item.alt} fill
+                      className="object-cover transition-all duration-[350ms] ease-out group-hover:scale-[1.02]"
+                      sizes="33vw" quality={75}
+                    />
+                    <div className="absolute inset-0 bg-text/0 transition-all duration-[350ms] group-hover:bg-text/5 group-hover:shadow-[0_8px_30px_rgba(100,60,40,0.15)]" />
+                  </div>
+                </ScrollReveal>
+              ))}
+            </motion.div>
+          </div>
+        )}
       </Container>
     </section>
   );

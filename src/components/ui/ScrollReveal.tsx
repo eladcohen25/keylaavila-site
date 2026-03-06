@@ -2,6 +2,7 @@
 
 import { motion, useInView } from "framer-motion";
 import { useRef, type ReactNode } from "react";
+import { useIsMobile } from "@/lib/MobileProvider";
 
 interface ScrollRevealProps {
   children: ReactNode;
@@ -14,7 +15,7 @@ interface ScrollRevealProps {
   threshold?: number;
 }
 
-export default function ScrollReveal({
+function AnimatedReveal({
   children,
   className = "",
   delay = 0,
@@ -57,4 +58,15 @@ export default function ScrollReveal({
       {children}
     </motion.div>
   );
+}
+
+export default function ScrollReveal(props: ScrollRevealProps) {
+  const isMobile = useIsMobile();
+
+  // Mobile or initial SSR: render immediately — no observer, no animation
+  if (isMobile !== false) {
+    return <div className={props.className}>{props.children}</div>;
+  }
+
+  return <AnimatedReveal {...props} />;
 }
