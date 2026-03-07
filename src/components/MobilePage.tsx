@@ -401,11 +401,18 @@ function MobTestimonials() {
 
 /* ─── GALLERY ─── */
 const galleryItems = [
-  { src: "/images/lifestyle/editorial-standing.jpg", alt: "Editorial", aspect: "aspect-[3/4]" },
-  { src: "/images/fitness/barbell-training.jpg", alt: "Training", aspect: "aspect-[3/4]" },
-  { src: "/images/lifestyle/editorial-profile.jpg", alt: "Profile", aspect: "aspect-[3/4]" },
-  { src: "/images/lifestyle/pilates-prep.jpg", alt: "Pilates", aspect: "aspect-[4/5]" },
+  { src: "/images/gallery/dsc06646.jpg", alt: "Studio portrait", aspect: "aspect-[3/4]" },
+  { src: "/images/gallery/img_1983.jpg", alt: "Lifestyle", aspect: "aspect-[3/4]" },
+  { src: "/images/gallery/img_1984.jpg", alt: "Editorial", aspect: "aspect-[4/5]" },
+  { src: "/images/gallery/39.jpg", alt: "Fitness", aspect: "aspect-[3/4]" },
+  { src: "/images/gallery/03afffbc-3bf4-4894-89b5-c5e073422c61.jpg", alt: "Portrait", aspect: "aspect-[3/4]" },
+  { src: "/images/gallery/img_1986.jpg", alt: "Movement", aspect: "aspect-[3/4]" },
+  { src: "/images/gallery/img_4899.jpg", alt: "Outdoor", aspect: "aspect-[3/4]" },
+  { src: "/images/gallery/56.jpg", alt: "Active lifestyle", aspect: "aspect-[3/2]" },
 ];
+
+const galleryCol1 = galleryItems.filter((_, i) => i % 2 === 0);
+const galleryCol2 = galleryItems.filter((_, i) => i % 2 === 1);
 
 function MobGallery() {
   return (
@@ -413,11 +420,20 @@ function MobGallery() {
       <div className={CONTAINER}>
         <Heading label="Gallery" title="A Visual Story" subtitle="Moments captured — in the studio, in training, and in life." decorativeLine />
         <div className="mt-12 grid grid-cols-2 gap-2">
-          {galleryItems.map((item, i) => (
-            <div key={item.src} className={cn("relative overflow-hidden rounded-[4px]", item.aspect, i % 2 === 1 ? "mt-4" : "")}>
-              <Image src={item.src} alt={item.alt} fill className="object-cover" sizes="45vw" quality={40} />
-            </div>
-          ))}
+          <div className="flex flex-col gap-2">
+            {galleryCol1.map((item) => (
+              <div key={item.src} className={cn("relative overflow-hidden rounded-[4px]", item.aspect)}>
+                <Image src={item.src} alt={item.alt} fill className="object-cover" sizes="45vw" quality={40} />
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-col gap-2 pt-6">
+            {galleryCol2.map((item) => (
+              <div key={item.src} className={cn("relative overflow-hidden rounded-[4px]", item.aspect)}>
+                <Image src={item.src} alt={item.alt} fill className="object-cover" sizes="45vw" quality={40} />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </section>

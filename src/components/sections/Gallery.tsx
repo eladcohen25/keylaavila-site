@@ -29,6 +29,14 @@ const galleryItems = [
   { id: 18, src: "/images/fitness/fitness2-img_1604.jpg", alt: "Fitness lifestyle", aspect: "aspect-[4/5]" },
   { id: 19, src: "/images/fitness/fitness2-img_1605.jpg", alt: "Active lifestyle", aspect: "aspect-[3/4]" },
   { id: 20, src: "/images/fitness/fitness2-img_3050.jpg", alt: "Training moment", aspect: "aspect-[1/1]" },
+  { id: 21, src: "/images/gallery/dsc06646.jpg", alt: "Studio portrait", aspect: "aspect-[3/4]" },
+  { id: 22, src: "/images/gallery/img_1983.jpg", alt: "Lifestyle shoot", aspect: "aspect-[3/4]" },
+  { id: 23, src: "/images/gallery/img_1984.jpg", alt: "Editorial portrait", aspect: "aspect-[4/5]" },
+  { id: 24, src: "/images/gallery/img_1986.jpg", alt: "Movement portrait", aspect: "aspect-[3/4]" },
+  { id: 25, src: "/images/gallery/img_4899.jpg", alt: "Outdoor session", aspect: "aspect-[3/4]" },
+  { id: 26, src: "/images/gallery/03afffbc-3bf4-4894-89b5-c5e073422c61.jpg", alt: "Portrait", aspect: "aspect-[3/4]" },
+  { id: 27, src: "/images/gallery/39.jpg", alt: "Fitness editorial", aspect: "aspect-[3/4]" },
+  { id: 28, src: "/images/gallery/56.jpg", alt: "Active lifestyle", aspect: "aspect-[3/2]" },
 ];
 
 const mobileItems = galleryItems.slice(0, 4);
