@@ -102,6 +102,7 @@ function MobHero() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <a href="#booking" className="inline-flex items-center justify-center rounded-full bg-bg px-8 py-4 font-sans text-[13px] font-medium uppercase tracking-[0.08em] text-text">Book Training</a>
+            <a href="#ugc" className="inline-flex items-center justify-center rounded-full border-[1.5px] border-white/40 px-8 py-4 font-sans text-[13px] font-medium uppercase tracking-[0.08em] text-white">For Brands</a>
           </div>
         </div>
       </div>
