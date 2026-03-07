@@ -102,7 +102,7 @@ function HeroDesktop() {
         transition={{ duration: 1.6, ease }}
       >
         <Image
-          src="/images/hero/keyla-hero.jpg"
+          src="/images/hero/keyla-hero-full.jpg"
           alt="Keyla Avila — Creator, trainer, and Pilates instructor"
           fill
           className="object-cover object-top"
