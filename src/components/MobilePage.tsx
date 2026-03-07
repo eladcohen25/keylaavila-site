@@ -534,12 +534,55 @@ function MobBooking() {
   );
 }
 
+/* ─── FAQ ─── */
+const faqs = [
+  { q: "What does a typical personal training session look like?", a: "Every session is tailored to your goals. We begin with a dynamic warm-up, move into the main training block, and finish with cooldown and mobility work. All programming is based on proper biomechanics." },
+  { q: "Do I need Pilates experience to start?", a: "Not at all. My sessions meet you where you are — whether you're a complete beginner or experienced practitioner. We'll start with foundational movement patterns and progress at your pace." },
+  { q: "Are sessions available in-person or virtually?", a: "Both. I offer in-person sessions locally as well as virtual training and Pilates for clients anywhere via live video call." },
+  { q: "How does brand collaboration work?", a: "I work with brands on a project basis — from single posts to long-term partnerships. Every collaboration begins with a conversation to ensure alignment on values and creative direction." },
+  { q: "What makes your approach different?", a: "My kinesiology degree gives me a deep understanding of human movement science. Every program I design is rooted in evidence — not trends." },
+  { q: "How often should I train?", a: "Most clients see great results with 3–4 sessions per week, but I'll design a program that fits your life realistically. Consistency matters more than frequency." },
+  { q: "Do you offer nutrition guidance?", a: "I share evidence-based nutritional guidance as part of my holistic approach. For specific dietary needs, I refer trusted nutrition professionals." },
+  { q: "What's your cancellation policy?", a: "I ask for at least 24 hours' notice for cancellations or rescheduling." },
+];
+
+function MobFAQ() {
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
+  return (
+    <section id="faq" className="bg-bg py-24">
+      <div className={CONTAINER}>
+        <Heading label="FAQ" title="Common Questions" subtitle="Everything you need to know before we start working together." />
+        <div className="mx-auto mt-12 max-w-3xl">
+          {faqs.map((faq, i) => (
+            <div key={i} className="border-b border-border/40">
+              <button
+                onClick={() => setOpenIdx(openIdx === i ? null : i)}
+                className="flex w-full items-center justify-between py-5 text-left"
+              >
+                <span className="pr-6 font-serif text-base font-light text-text">{faq.q}</span>
+                <span className={cn("flex h-7 w-7 flex-shrink-0 items-center justify-center text-terracotta transition-transform duration-200", openIdx === i ? "rotate-45" : "")}>
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="8" y1="2" x2="8" y2="14" /><line x1="2" y1="8" x2="14" y2="8" /></svg>
+                </span>
+              </button>
+              <div className={cn("grid transition-all duration-300", openIdx === i ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0")}>
+                <div className="overflow-hidden">
+                  <p className="pb-5 font-sans text-sm font-light leading-[1.8] text-text/70">{faq.a}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ─── SHOP LINKS ─── */
 const shopLinks = [
-  { title: "Reebok Smart Ring", description: "20% off with code: Keyla 20", href: "https://www.reeboksmartring.com/products/reebok-smart-ring?variant=52098329313613", logo: "/Logo Scroll/Reebok_2019_logo.svg.png", code: "Keyla 20" },
-  { title: "The One Percent", description: "Resilience is Ritual.", href: "https://onepercentclo.com/password", logo: "/Logo Scroll/New Logo.png", code: null },
-  { title: "Shop TLF", description: "Premium gym-to-street apparel.", href: "https://tlfapparel.com/?dt_id=2301538&utm_source=social&utm_medium=Collab&utm_campaign=BA15AVILA&utm_link=BA15AVILA", logo: null, logoText: "TLF", code: "BA15AVILA" },
-  { title: "Amazon Storefront", description: "Shop Keyla's favorite products.", href: "https://www.amazon.com/shop/keylanavila", logo: null, logoText: "amazon", code: null },
+  { title: "Reebok Smart Ring", description: "20% off with code: Keyla 20", href: "https://www.reeboksmartring.com/products/reebok-smart-ring?variant=52098329313613", logoText: "Reebok", code: "Keyla 20" },
+  { title: "The One Percent", description: "Resilience is Ritual.", href: "https://onepercentclo.com/password", logoText: "1%", code: null },
+  { title: "Shop TLF", description: "Premium gym-to-street apparel.", href: "https://tlfapparel.com/?dt_id=2301538&utm_source=social&utm_medium=Collab&utm_campaign=BA15AVILA&utm_link=BA15AVILA", logoText: "TLF", code: "BA15AVILA" },
+  { title: "Amazon Storefront", description: "Shop Keyla's favorite products.", href: "https://www.amazon.com/shop/keylanavila", logoText: "amazon", code: null },
 ];
 
 function MobShopLinks() {
@@ -548,11 +591,11 @@ function MobShopLinks() {
     <section className="bg-bg-alt py-24">
       <div className={CONTAINER}>
         <Heading label="Shop & Save" title="Keyla's Picks" subtitle="Exclusive discount codes and curated recommendations." />
-        <div className="mx-auto mt-12 grid max-w-4xl gap-4 sm:grid-cols-2">
+        <div className="mx-auto mt-12 max-w-4xl space-y-3">
           {shopLinks.map((link, i) => (
             <a key={link.title} href={link.href} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 rounded-xl border border-terracotta/15 bg-bg px-5 py-4">
-              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-bg-alt">
-                {link.logo ? <Image src={link.logo} alt={link.title} width={32} height={32} className="h-7 w-auto object-contain" /> : <span className="font-sans text-xs font-bold uppercase text-text">{link.logoText}</span>}
+              <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-bg-alt">
+                <span className="font-sans text-[10px] font-bold uppercase tracking-wide text-text">{link.logoText}</span>
               </div>
               <div className="min-w-0 flex-1">
                 <span className="block font-serif text-base font-medium text-text">{link.title}</span>
@@ -564,6 +607,9 @@ function MobShopLinks() {
                   </button>
                 )}
               </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-text-muted/40">
+                <line x1="7" y1="17" x2="17" y2="7" /><polyline points="7 7 17 7 17 17" />
+              </svg>
             </a>
           ))}
         </div>
@@ -618,6 +664,7 @@ export default function MobilePage() {
         <MobTestimonials />
         <MobGallery />
         <MobBooking />
+        <MobFAQ />
         <MobShopLinks />
       </main>
       <MobFooter />
