@@ -57,7 +57,7 @@ function NavbarMobile() {
   return (
     <>
       <header
-        className={`mob-slide-down fixed top-0 left-0 z-50 w-full transition-all duration-500 ${
+        className={`mob-slide-down fixed left-0 top-[var(--event-banner-height)] z-50 w-full transition-all duration-500 ${
           scrolled
             ? "bg-bg shadow-[0_1px_0_0_rgba(0,0,0,0.04)]"
             : "bg-transparent"
@@ -158,7 +158,7 @@ function NavbarDesktop() {
   return (
     <>
       <motion.header
-        className={`fixed top-0 left-0 z-50 w-full transition-all duration-500 ${
+        className={`fixed left-0 top-[var(--event-banner-height)] z-50 w-full transition-all duration-500 ${
           scrolled
             ? "bg-bg/90 backdrop-blur-md shadow-[0_1px_0_0_rgba(0,0,0,0.04)]"
             : "bg-transparent"

@@ -9,11 +9,22 @@ export async function GET() {
       getInstagramPosts(12),
       getInstagramProfile(),
     ]);
-    return NextResponse.json({ posts, profile }, { status: 200 });
+    return NextResponse.json(
+      { posts, profile },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store, must-revalidate",
+        },
+      }
+    );
   } catch {
     return NextResponse.json(
       { posts: [], profile: null, error: "Failed to fetch" },
-      { status: 500 }
+      {
+        status: 500,
+        headers: { "Cache-Control": "no-store" },
+      }
     );
   }
 }

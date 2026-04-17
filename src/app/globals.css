@@ -15,8 +15,20 @@
   --font-sans: var(--font-dm-sans);
 }
 
+:root {
+  /* Space for fixed event banner; nav uses same offset */
+  --event-banner-height: 3.5rem;
+}
+
+@media (max-width: 767px) {
+  :root {
+    --event-banner-height: 5.75rem;
+  }
+}
+
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--event-banner-height) + 5.5rem);
 }
 
 body {

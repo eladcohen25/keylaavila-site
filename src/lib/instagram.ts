@@ -28,15 +28,15 @@ interface InstagramAPIResponse {
 }
 
 const INSTAGRAM_TOKEN = process.env.INSTAGRAM_ACCESS_TOKEN;
-const CACHE_DURATION = 1000 * 60 * 5; // 5 minutes for fresher counts
+/** Profile / counts — cache to limit API usage */
+const PROFILE_CACHE_MS = 1000 * 60 * 5;
 
 let cachedPosts: InstagramPost[] | null = null;
 let cachedProfile: InstagramProfile | null = null;
-let cacheTimestamp = 0;
 let profileCacheTimestamp = 0;
 
 export async function getInstagramProfile(): Promise<InstagramProfile | null> {
-  if (cachedProfile && Date.now() - profileCacheTimestamp < CACHE_DURATION) {
+  if (cachedProfile && Date.now() - profileCacheTimestamp < PROFILE_CACHE_MS) {
     return cachedProfile;
   }
 
@@ -68,30 +68,29 @@ export async function getInstagramProfile(): Promise<InstagramProfile | null> {
 export async function getInstagramPosts(
   limit: number = 12
 ): Promise<InstagramPost[]> {
-  if (cachedPosts && Date.now() - cacheTimestamp < CACHE_DURATION) {
-    return cachedPosts.slice(0, limit);
-  }
-
   if (!INSTAGRAM_TOKEN) return [];
 
   try {
     const fields = "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp";
-    const url = `https://graph.instagram.com/me/media?fields=${fields}&limit=${limit}&access_token=${INSTAGRAM_TOKEN}`;
+    const url = `https://graph.instagram.com/me/media?fields=${fields}&limit=${Math.min(limit, 50)}&access_token=${INSTAGRAM_TOKEN}`;
 
     const response = await fetch(url, { cache: "no-store" });
 
     if (!response.ok) {
       console.error("Instagram API error:", response.status);
-      return cachedPosts ?? [];
+      return cachedPosts?.slice(0, limit) ?? [];
     }
 
     const data: InstagramAPIResponse = await response.json();
-    cachedPosts = data.data;
-    cacheTimestamp = Date.now();
+    const raw = Array.isArray(data.data) ? data.data : [];
+    const sorted = [...raw].sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+    cachedPosts = sorted;
 
-    return cachedPosts.slice(0, limit);
+    return sorted.slice(0, limit);
   } catch (error) {
     console.error("Failed to fetch Instagram posts:", error);
-    return cachedPosts ?? [];
+    return cachedPosts?.slice(0, limit) ?? [];
   }
 }

@@ -177,14 +177,21 @@ export default function ContentCreator() {
     const isMob = window.matchMedia("(max-width: 768px)").matches;
     async function fetchPosts() {
       try {
-        const res = await fetch("/api/instagram");
+        const res = await fetch(`/api/instagram?t=${Date.now()}`, { cache: "no-store" });
+        if (!res.ok) return;
         const data = await res.json();
-        if (data.posts?.length > 0) {
-          setPosts(data.posts.slice(0, isMob ? 6 : 9));
+        if (Array.isArray(data.posts) && data.posts.length > 0) {
+          const sorted = [...data.posts].sort(
+            (a: InstagramPost, b: InstagramPost) =>
+              new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+          );
+          setPosts(sorted.slice(0, isMob ? 6 : 9));
           setIsLive(true);
         }
         if (data.profile) setProfile(data.profile);
-      } catch { /* fallback */ }
+      } catch {
+        /* fallback */
+      }
     }
     fetchPosts();
   }, []);

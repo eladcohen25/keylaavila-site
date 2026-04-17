@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import type { InstagramPost, InstagramProfile } from "@/lib/instagram";
+import LumaButton from "@/components/LumaButton";
 
 /* ─── Shared utilities ─── */
 const cn = (...c: string[]) => c.filter(Boolean).join(" ");
@@ -54,7 +55,7 @@ function MobNavbar() {
 
   return (
     <>
-      <header className={cn("fixed top-0 left-0 z-50 w-full transition-all duration-500", scrolled ? "bg-bg shadow-[0_1px_0_0_rgba(0,0,0,0.04)]" : "bg-transparent")}>
+      <header className={cn("fixed left-0 top-[var(--event-banner-height)] z-50 w-full transition-all duration-500", scrolled ? "bg-bg shadow-[0_1px_0_0_rgba(0,0,0,0.04)]" : "bg-transparent")}>
         <div className={cn(CONTAINER, "flex items-center justify-between py-4")}>
           <a href="#" className="relative block h-10 w-28">
             <Image src="/final keyla logo.png" alt="Keyla Avila" fill className="object-contain" sizes="128px" priority />
@@ -89,7 +90,7 @@ function MobHero() {
         <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10" />
       </div>
-      <div className={cn(CONTAINER, "relative z-10 flex h-full flex-col justify-end pb-16 pt-32")}>
+      <div className={cn(CONTAINER, "relative z-10 flex h-full flex-col justify-end pb-16 pt-[calc(var(--event-banner-height)+8rem)]")}>
         <div className="max-w-2xl">
           <span className="mb-5 inline-block font-sans text-[11px] font-medium uppercase tracking-[0.18em] text-white/70">Creator · Trainer · Pilates Instructor</span>
           <h1 className="font-serif text-[2.8rem] font-light leading-[1.05] tracking-tight text-white">
@@ -103,6 +104,9 @@ function MobHero() {
           <div className="mt-8 flex flex-wrap gap-3">
             <a href="#booking" className="inline-flex items-center justify-center rounded-full bg-bg px-8 py-4 font-sans text-[13px] font-medium uppercase tracking-[0.08em] text-text">Book Training</a>
             <a href="#ugc" className="inline-flex items-center justify-center rounded-full border-[1.5px] border-white/40 px-8 py-4 font-sans text-[13px] font-medium uppercase tracking-[0.08em] text-white">For Brands</a>
+            <LumaButton className="inline-flex items-center justify-center rounded-full bg-terracotta px-8 py-4 font-sans text-[13px] font-medium uppercase tracking-[0.08em] text-bg transition-colors duration-200 hover:bg-burgundy">
+              Get Tickets
+            </LumaButton>
           </div>
         </div>
       </div>
@@ -288,16 +292,35 @@ function MobUGC() {
 }
 
 /* ─── CONTENT CREATOR (Instagram Feed) ─── */
+const mobInstagramFallback = [
+  { src: "/images/fitness/gym-portrait.jpg", alt: "Gym portrait" },
+  { src: "/images/lifestyle/editorial-seated.jpg", alt: "Editorial" },
+  { src: "/images/pilates/pilates-studio.jpg", alt: "Pilates" },
+  { src: "/images/lifestyle/pilates-prep.jpg", alt: "Studio warmup" },
+  { src: "/images/fitness/puma-event.jpg", alt: "Puma event" },
+  { src: "/images/lifestyle/night-editorial.jpg", alt: "Night editorial" },
+];
+
 function MobContentCreator() {
   const [posts, setPosts] = useState<InstagramPost[]>([]);
   const [profile, setProfile] = useState<InstagramProfile | null>(null);
   const [isLive, setIsLive] = useState(false);
 
   useEffect(() => {
-    fetch("/api/instagram").then(r => r.json()).then(data => {
-      if (data.posts?.length > 0) { setPosts(data.posts.slice(0, 6)); setIsLive(true); }
-      if (data.profile) setProfile(data.profile);
-    }).catch(() => {});
+    fetch(`/api/instagram?t=${Date.now()}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data) => {
+        if (Array.isArray(data.posts) && data.posts.length > 0) {
+          const sorted = [...data.posts].sort(
+            (a: InstagramPost, b: InstagramPost) =>
+              new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+          );
+          setPosts(sorted.slice(0, 6));
+          setIsLive(true);
+        }
+        if (data.profile) setProfile(data.profile);
+      })
+      .catch(() => {});
   }, []);
 
   return (
@@ -323,11 +346,24 @@ function MobContentCreator() {
         </div>
         <div className="mx-auto mt-6 max-w-4xl">
           <div className="grid grid-cols-3 gap-2">
-            {(isLive ? posts : []).map((post) => (
-              <a key={post.id} href={post.permalink} target="_blank" rel="noopener noreferrer" className="relative aspect-square overflow-hidden rounded-[4px] bg-border/20">
-                <Image src={post.media_type === "VIDEO" ? post.thumbnail_url || post.media_url : post.media_url} alt="Post" fill className="object-cover" sizes="30vw" quality={40} />
-              </a>
-            ))}
+            {isLive
+              ? posts.map((post) => (
+                  <a key={post.id} href={post.permalink} target="_blank" rel="noopener noreferrer" className="relative aspect-square overflow-hidden rounded-[4px] bg-border/20">
+                    <Image
+                      src={post.media_type === "VIDEO" ? post.thumbnail_url || post.media_url : post.media_url}
+                      alt={post.caption?.slice(0, 80) || "Instagram post"}
+                      fill
+                      className="object-cover"
+                      sizes="30vw"
+                      quality={40}
+                    />
+                  </a>
+                ))
+              : mobInstagramFallback.map((img) => (
+                  <a key={img.src} href="https://instagram.com/keylanavila" target="_blank" rel="noopener noreferrer" className="relative aspect-square overflow-hidden rounded-[4px] bg-border/20">
+                    <Image src={img.src} alt={img.alt} fill className="object-cover" sizes="30vw" quality={40} />
+                  </a>
+                ))}
           </div>
           <div className="mt-6 text-center">
             <a href="https://instagram.com/keylanavila" className="inline-flex items-center gap-2 font-sans text-sm font-medium tracking-wider text-terracotta">View more on Instagram →</a>
