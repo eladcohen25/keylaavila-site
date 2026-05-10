@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, DM_Sans } from "next/font/google";
 import "./globals.css";
-import EventCountdownBanner from "@/components/EventCountdownBanner";
-import LumaCheckoutScript from "@/components/LumaCheckoutScript";
 
 const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
@@ -50,11 +48,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${cormorant.variable} ${dmSans.variable}`}>
-      <body className="antialiased">
-        <LumaCheckoutScript />
-        <EventCountdownBanner />
-        {children}
-      </body>
+      <body className="antialiased">{children}</body>
     </html>
   );
 }

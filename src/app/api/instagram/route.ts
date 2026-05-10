@@ -1,30 +1,22 @@
 import { NextResponse } from "next/server";
-import { getInstagramPosts, getInstagramProfile } from "@/lib/instagram";
+import { getInstagramData } from "@/lib/instagram";
 
-export const dynamic = "force-dynamic";
+/** ISR: cache the route response at the Vercel edge for 1 hour, serve
+ *  stale while revalidating in the background. The `lib/instagram` module
+ *  also memoizes in-memory and serves stale on Apify errors. */
+export const revalidate = 3600;
 
 export async function GET() {
-  try {
-    const [posts, profile] = await Promise.all([
-      getInstagramPosts(12),
-      getInstagramProfile(),
-    ]);
-    return NextResponse.json(
-      { posts, profile },
-      {
-        status: 200,
-        headers: {
-          "Cache-Control": "no-store, must-revalidate",
-        },
-      }
-    );
-  } catch {
-    return NextResponse.json(
-      { posts: [], profile: null, error: "Failed to fetch" },
-      {
-        status: 500,
-        headers: { "Cache-Control": "no-store" },
-      }
-    );
-  }
+  const { profile, posts } = await getInstagramData();
+
+  return NextResponse.json(
+    { profile, posts },
+    {
+      status: 200,
+      headers: {
+        "Cache-Control":
+          "public, s-maxage=3600, stale-while-revalidate=86400",
+      },
+    }
+  );
 }

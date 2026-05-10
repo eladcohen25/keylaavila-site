@@ -177,7 +177,7 @@ export default function ContentCreator() {
     const isMob = window.matchMedia("(max-width: 768px)").matches;
     async function fetchPosts() {
       try {
-        const res = await fetch(`/api/instagram?t=${Date.now()}`, { cache: "no-store" });
+        const res = await fetch("/api/instagram");
         if (!res.ok) return;
         const data = await res.json();
         if (Array.isArray(data.posts) && data.posts.length > 0) {
