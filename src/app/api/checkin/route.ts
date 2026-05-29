@@ -78,8 +78,14 @@ export async function POST(request: Request) {
     data.photo_front_url = photoFrontUrl;
     data.photo_back_url = photoBackUrl;
 
+    const clientId = form.get("client_id");
+    const insertData: Record<string, unknown> = { ...data };
+    if (typeof clientId === "string" && clientId.length > 10) {
+      insertData.client_id = clientId;
+    }
+
     const supabase = getSupabaseAdmin();
-    const { error: dbError } = await supabase.from("checkins").insert(data);
+    const { error: dbError } = await supabase.from("checkins").insert(insertData);
 
     if (dbError) {
       console.error("[checkin] DB insert failed:", dbError);

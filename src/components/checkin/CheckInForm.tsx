@@ -259,7 +259,7 @@ function PhotoUpload({
   );
 }
 
-export default function CheckInForm() {
+export default function CheckInForm({ clientId }: { clientId?: string }) {
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [missingFields, setMissingFields] = useState<string[]>([]);
@@ -290,6 +290,7 @@ export default function CheckInForm() {
 
     if (photoFront) fd.set("photo_front", await compressImage(photoFront));
     if (photoBack) fd.set("photo_back", await compressImage(photoBack));
+    if (clientId) fd.set("client_id", clientId);
 
     try {
       const res = await fetch("/api/checkin", { method: "POST", body: fd });
