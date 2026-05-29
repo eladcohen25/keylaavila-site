@@ -34,6 +34,33 @@ export async function signIn(email: string, password: string) {
   return supabase.auth.signInWithPassword({ email, password });
 }
 
+export async function signUp(
+  email: string,
+  password: string,
+  fullName: string
+) {
+  const supabase = getSupabaseBrowser();
+  return supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { full_name: fullName } },
+  });
+}
+
+export async function requestPasswordReset(email: string) {
+  const supabase = getSupabaseBrowser();
+  const redirectTo =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/portal/update-password`
+      : undefined;
+  return supabase.auth.resetPasswordForEmail(email, { redirectTo });
+}
+
+export async function updatePassword(newPassword: string) {
+  const supabase = getSupabaseBrowser();
+  return supabase.auth.updateUser({ password: newPassword });
+}
+
 export async function signOut() {
   const supabase = getSupabaseBrowser();
   return supabase.auth.signOut();
