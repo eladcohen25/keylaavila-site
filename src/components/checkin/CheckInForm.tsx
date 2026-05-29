@@ -7,6 +7,44 @@ import Container from "@/components/ui/Container";
 
 type SubmitState = "idle" | "loading" | "success" | "error";
 
+/** Resize + compress an image to JPEG, max 1200px on longest side, ~80% quality.
+ *  Keeps each photo well under Vercel's 4.5 MB body limit. */
+async function compressImage(file: File, maxSize = 1200, quality = 0.8): Promise<File> {
+  if (!file.type.startsWith("image/")) return file;
+
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxSize || height > maxSize) {
+        const ratio = Math.min(maxSize / width, maxSize / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, width, height);
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) { resolve(file); return; }
+          const compressed = new File([blob], file.name.replace(/\.\w+$/, ".jpg"), {
+            type: "image/jpeg",
+          });
+          resolve(compressed);
+        },
+        "image/jpeg",
+        quality
+      );
+    };
+    img.onerror = () => resolve(file);
+    img.src = URL.createObjectURL(file);
+  });
+}
+
 const inputClasses =
   "w-full rounded-lg border border-border bg-bg/50 px-5 py-4 font-sans text-sm font-light text-text placeholder:text-text-muted/50 transition-all duration-200 focus:border-terracotta focus:shadow-[0_0_0_3px_rgba(196,113,74,0.2)] focus:outline-none";
 
@@ -228,12 +266,6 @@ export default function CheckInForm() {
 
   const [clientName, setClientName] = useState("");
   const [weekOf, setWeekOf] = useState(todayISO);
-  const [weight, setWeight] = useState("");
-  const [waist, setWaist] = useState("");
-  const [hips, setHips] = useState("");
-  const [chest, setChest] = useState("");
-  const [arms, setArms] = useState("");
-  const [thighs, setThighs] = useState("");
   const [photoFront, setPhotoFront] = useState<File | null>(null);
   const [photoBack, setPhotoBack] = useState<File | null>(null);
   const [sessions, setSessions] = useState("");
@@ -256,12 +288,22 @@ export default function CheckInForm() {
     const form = e.currentTarget;
     const fd = new FormData(form);
 
-    if (photoFront) fd.set("photo_front", photoFront);
-    if (photoBack) fd.set("photo_back", photoBack);
+    if (photoFront) fd.set("photo_front", await compressImage(photoFront));
+    if (photoBack) fd.set("photo_back", await compressImage(photoBack));
 
     try {
       const res = await fetch("/api/checkin", { method: "POST", body: fd });
-      const json = await res.json();
+
+      let json: { ok?: boolean; error?: string; missing?: string[] };
+      try {
+        json = await res.json();
+      } catch {
+        setErrorMsg(
+          res.ok ? "Unexpected response from server" : `Server error (${res.status})`
+        );
+        setSubmitState("error");
+        return;
+      }
 
       if (!res.ok) {
         setErrorMsg(json.error ?? "Submission failed");
@@ -274,12 +316,6 @@ export default function CheckInForm() {
       form.reset();
       setClientName("");
       setWeekOf(todayISO());
-      setWeight("");
-      setWaist("");
-      setHips("");
-      setChest("");
-      setArms("");
-      setThighs("");
       setPhotoFront(null);
       setPhotoBack(null);
       setSessions("");
@@ -370,74 +406,6 @@ export default function CheckInForm() {
 
       <Section
         num="02"
-        title="Body Metrics"
-        note="Measure in the morning, under the same conditions each week. All optional."
-      >
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          <div>
-            <label htmlFor="weight" className={labelClasses}>
-              Current weight (lbs)
-            </label>
-            <input
-              id="weight"
-              name="weight"
-              type="number"
-              step="0.1"
-              min="0"
-              placeholder="e.g. 145"
-              className={inputClasses}
-              value={weight}
-              onChange={(e) => setWeight(e.target.value)}
-            />
-          </div>
-          {(
-            [
-              ["waist", "Waist (in)"],
-              ["hips", "Hips (in)"],
-              ["chest", "Chest (in)"],
-              ["arms", "Arms (in)"],
-              ["thighs", "Thighs (in)"],
-            ] as const
-          ).map(([id, lbl]) => (
-            <div key={id}>
-              <label htmlFor={id} className={labelClasses}>
-                {lbl}
-              </label>
-              <input
-                id={id}
-                name={id}
-                type="number"
-                step="0.1"
-                min="0"
-                placeholder="inches"
-                className={inputClasses}
-                value={
-                  id === "waist"
-                    ? waist
-                    : id === "hips"
-                      ? hips
-                      : id === "chest"
-                        ? chest
-                        : id === "arms"
-                          ? arms
-                          : thighs
-                }
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (id === "waist") setWaist(v);
-                  else if (id === "hips") setHips(v);
-                  else if (id === "chest") setChest(v);
-                  else if (id === "arms") setArms(v);
-                  else setThighs(v);
-                }}
-              />
-            </div>
-          ))}
-        </div>
-      </Section>
-
-      <Section
-        num="03"
         title="Progress Photos"
         note="Same lighting, outfit, and spot each week. Optional but very helpful."
       >
@@ -457,7 +425,7 @@ export default function CheckInForm() {
         </div>
       </Section>
 
-      <Section num="04" title="Training">
+      <Section num="03" title="Training">
         <div>
           <p className={labelClasses}>
             Sessions with Keyla this week <span className="text-burgundy">*</span>
@@ -531,7 +499,7 @@ export default function CheckInForm() {
         </div>
       </Section>
 
-      <Section num="05" title="Fuel & Recovery">
+      <Section num="04" title="Fuel & Recovery">
         <div>
           <p className={labelClasses}>
             How dialed was your nutrition? <span className="text-burgundy">*</span>
@@ -612,7 +580,7 @@ export default function CheckInForm() {
         </div>
       </Section>
 
-      <Section num="06" title="Wins & Struggles">
+      <Section num="05" title="Wins & Struggles">
         <div>
           <label htmlFor="weekly_notes" className={labelClasses}>
             Tell me about your week

@@ -6,7 +6,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const maxDuration = 60;
 
-const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
+const MAX_PHOTO_BYTES = 4.5 * 1024 * 1024;
 const ALLOWED_TYPES = new Set([
   "image/jpeg",
   "image/png",
