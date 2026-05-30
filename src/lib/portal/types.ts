@@ -45,6 +45,8 @@ export interface Exercise {
   default_sets: number | null;
   default_reps: string | null;
   cue_notes: string | null;
+  tempo: string | null;
+  is_unilateral: boolean;
   created_by: string | null;
   created_at: string;
 }
@@ -72,6 +74,10 @@ export interface AssignedExercise {
   target_rpe: string | null;
   rest_seconds: number | null;
   notes: string | null;
+  use_percent: boolean;
+  tempo: string | null;
+  percent_1rm: number | null;
+  each_side: boolean;
   exercise?: Exercise;
 }
 
@@ -94,9 +100,18 @@ export interface SetLog {
   weight: number | null;
   reps: number | null;
   rpe: number | null;
+  percent_1rm: number | null;
   rest_taken_seconds: number | null;
   done: boolean;
   notes: string | null;
+}
+
+export interface ClientExerciseMax {
+  id: string;
+  client_id: string;
+  exercise_id: string;
+  one_rep_max: number;
+  updated_at: string;
 }
 
 export interface NutritionPlan {
@@ -119,6 +134,49 @@ export function currentWeekMonday(date = new Date()): string {
   const diff = (day === 0 ? -6 : 1) - day; // shift to Monday
   d.setDate(d.getDate() + diff);
   return d.toISOString().slice(0, 10);
+}
+
+/** Working weight from a 1RM and a target percentage, rounded to nearest 5 lb. */
+export function weightFromPercent(oneRepMax: number, percent: number): number {
+  return Math.round((oneRepMax * (percent / 100)) / 5) * 5;
+}
+
+/** MM:SS from a number of seconds (for inline rest display). */
+export function formatRest(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+/** Build an embeddable URL for a YouTube/Vimeo link, or null if not embeddable. */
+export function toEmbedUrl(url: string): string | null {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, "");
+    if (host === "youtu.be") {
+      return `https://www.youtube.com/embed/${u.pathname.slice(1)}`;
+    }
+    if (host.endsWith("youtube.com")) {
+      const v = u.searchParams.get("v");
+      if (v) return `https://www.youtube.com/embed/${v}`;
+      if (u.pathname.startsWith("/embed/")) return url;
+      if (u.pathname.startsWith("/shorts/")) {
+        return `https://www.youtube.com/embed/${u.pathname.split("/")[2]}`;
+      }
+    }
+    if (host.endsWith("vimeo.com")) {
+      const id = u.pathname.split("/").filter(Boolean).pop();
+      if (id) return `https://player.vimeo.com/video/${id}`;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+/** True if the URL points at a directly-playable video file. */
+export function isDirectVideo(url: string): boolean {
+  return /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(url);
 }
 
 export function formatDuration(seconds: number): string {

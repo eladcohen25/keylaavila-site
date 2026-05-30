@@ -9,17 +9,26 @@ interface SubmitSet {
   weight: number | null;
   reps: number | null;
   rpe: number | null;
+  percent_1rm: number | null;
   rest_taken_seconds: number | null;
   done: boolean;
 }
 
 interface SubmitExercise {
   assigned_exercise_id: string;
+  exercise_id?: string | null;
   exercise_name: string;
   target_sets: number | null;
   target_reps: string | null;
+  tempo?: string | null;
+  each_side?: boolean;
   notes: string | null;
   sets: SubmitSet[];
+}
+
+interface SubmitMax {
+  exercise_id: string;
+  one_rep_max: number;
 }
 
 interface SubmitBody {
@@ -29,6 +38,7 @@ interface SubmitBody {
   completed_at: string;
   total_duration_seconds: number;
   exercises: SubmitExercise[];
+  maxes?: SubmitMax[];
 }
 
 export async function POST(request: Request) {
@@ -85,6 +95,7 @@ export async function POST(request: Request) {
       weight: s.weight,
       reps: s.reps,
       rpe: s.rpe,
+      percent_1rm: s.percent_1rm,
       rest_taken_seconds: s.rest_taken_seconds,
       done: s.done,
       notes: ex.notes,
@@ -108,6 +119,24 @@ export async function POST(request: Request) {
     .eq("id", body.assigned_workout_id)
     .eq("client_id", userId);
 
+  // 3b. Upsert any 1RMs the client set/adjusted this session (best-effort).
+  const maxRows = (body.maxes ?? []).filter(
+    (m) => m.exercise_id && Number.isFinite(m.one_rep_max) && m.one_rep_max > 0
+  );
+  if (maxRows.length > 0) {
+    await supabase
+      .from("client_exercise_maxes")
+      .upsert(
+        maxRows.map((m) => ({
+          client_id: userId,
+          exercise_id: m.exercise_id,
+          one_rep_max: m.one_rep_max,
+          updated_at: new Date().toISOString(),
+        })),
+        { onConflict: "client_id,exercise_id" }
+      );
+  }
+
   // 4. Email Keyla a summary (best-effort — don't fail the submission)
   try {
     const { data: profile } = await supabase
@@ -126,6 +155,7 @@ export async function POST(request: Request) {
         weight: s.weight,
         reps: s.reps,
         rpe: s.rpe,
+        percent_1rm: s.percent_1rm,
         done: s.done,
       })),
     }));

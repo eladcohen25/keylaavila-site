@@ -29,6 +29,10 @@ export async function assignProgram(
       target_rpe: string | null;
       rest_seconds: number | null;
       notes: string | null;
+      use_percent: boolean | null;
+      tempo: string | null;
+      percent_1rm: number | null;
+      each_side: boolean | null;
     }>;
   }>) {
     const { data: aw } = await supabase
@@ -54,6 +58,10 @@ export async function assignProgram(
       target_rpe: pe.target_rpe,
       rest_seconds: pe.rest_seconds,
       notes: pe.notes,
+      use_percent: pe.use_percent ?? false,
+      tempo: pe.tempo,
+      percent_1rm: pe.percent_1rm,
+      each_side: pe.each_side ?? false,
     }));
     if (rows.length > 0) {
       await supabase.from("assigned_exercises").insert(rows);
@@ -103,6 +111,10 @@ export async function duplicateLastWeek(
       target_rpe: string | null;
       rest_seconds: number | null;
       notes: string | null;
+      use_percent: boolean | null;
+      tempo: string | null;
+      percent_1rm: number | null;
+      each_side: boolean | null;
     }>;
   }>) {
     const { data: aw } = await supabase
@@ -128,6 +140,10 @@ export async function duplicateLastWeek(
       target_rpe: ae.target_rpe,
       rest_seconds: ae.rest_seconds,
       notes: ae.notes,
+      use_percent: ae.use_percent ?? false,
+      tempo: ae.tempo,
+      percent_1rm: ae.percent_1rm,
+      each_side: ae.each_side ?? false,
     }));
     if (rows.length > 0) {
       await supabase.from("assigned_exercises").insert(rows);

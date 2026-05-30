@@ -23,6 +23,10 @@ interface ProgramExercise {
   target_rpe: string | null;
   rest_seconds: number | null;
   notes: string | null;
+  use_percent: boolean;
+  tempo: string | null;
+  percent_1rm: number | null;
+  each_side: boolean;
   exercise: Exercise | null;
 }
 interface ProgramDay {
@@ -206,8 +210,11 @@ function DayCard({
                 </p>
                 <p className="font-sans text-xs text-text-muted">
                   {pe.target_sets ?? "?"} × {pe.target_reps ?? "?"}
+                  {pe.use_percent && pe.percent_1rm != null ? ` · ${pe.percent_1rm}% 1RM` : ""}
                   {pe.target_rpe ? ` · RPE ${pe.target_rpe}` : ""}
                   {pe.rest_seconds != null ? ` · ${pe.rest_seconds}s rest` : ""}
+                  {pe.tempo ? ` · tempo ${pe.tempo}` : ""}
+                  {pe.each_side ? " · each side" : ""}
                 </p>
                 {pe.notes && <p className="font-sans text-xs italic text-text-muted">{pe.notes}</p>}
               </div>
@@ -264,6 +271,10 @@ function AddExerciseForm({
   const [rpe, setRpe] = useState("");
   const [rest, setRest] = useState("");
   const [notes, setNotes] = useState("");
+  const [usePercent, setUsePercent] = useState(false);
+  const [percent, setPercent] = useState("");
+  const [tempo, setTempo] = useState("");
+  const [eachSide, setEachSide] = useState(false);
   const [saving, setSaving] = useState(false);
 
   function onPick(id: string) {
@@ -272,6 +283,8 @@ function AddExerciseForm({
     if (ex) {
       if (ex.default_sets != null) setSets(String(ex.default_sets));
       if (ex.default_reps) setReps(ex.default_reps);
+      setTempo(ex.tempo ?? "");
+      setEachSide(ex.is_unilateral);
     }
   }
 
@@ -288,11 +301,70 @@ function AddExerciseForm({
       target_rpe: rpe.trim() || null,
       rest_seconds: rest === "" ? null : Number(rest),
       notes: notes.trim() || null,
+      use_percent: usePercent,
+      percent_1rm: usePercent && percent !== "" ? Number(percent) : null,
+      tempo: tempo.trim() || null,
+      each_side: eachSide,
     });
     setSaving(false);
     onDone();
   }
 
+  return (
+    <ExercisePrescriptionForm
+      library={library}
+      exerciseId={exerciseId}
+      onPick={onPick}
+      sets={sets} setSets={setSets}
+      reps={reps} setReps={setReps}
+      rpe={rpe} setRpe={setRpe}
+      rest={rest} setRest={setRest}
+      notes={notes} setNotes={setNotes}
+      usePercent={usePercent} setUsePercent={setUsePercent}
+      percent={percent} setPercent={setPercent}
+      tempo={tempo} setTempo={setTempo}
+      eachSide={eachSide} setEachSide={setEachSide}
+      saving={saving}
+      onCancel={onCancel}
+      onSave={save}
+    />
+  );
+}
+
+/** Shared prescription editor used by the program builder and the assign panel. */
+export function ExercisePrescriptionForm({
+  library,
+  exerciseId,
+  onPick,
+  sets, setSets,
+  reps, setReps,
+  rpe, setRpe,
+  rest, setRest,
+  notes, setNotes,
+  usePercent, setUsePercent,
+  percent, setPercent,
+  tempo, setTempo,
+  eachSide, setEachSide,
+  saving,
+  onCancel,
+  onSave,
+}: {
+  library: Exercise[];
+  exerciseId: string;
+  onPick: (id: string) => void;
+  sets: string; setSets: (v: string) => void;
+  reps: string; setReps: (v: string) => void;
+  rpe: string; setRpe: (v: string) => void;
+  rest: string; setRest: (v: string) => void;
+  notes: string; setNotes: (v: string) => void;
+  usePercent: boolean; setUsePercent: (v: boolean) => void;
+  percent: string; setPercent: (v: string) => void;
+  tempo: string; setTempo: (v: string) => void;
+  eachSide: boolean; setEachSide: (v: boolean) => void;
+  saving: boolean;
+  onCancel: () => void;
+  onSave: () => void;
+}) {
   const fieldCls =
     "w-full rounded-lg border border-border bg-white px-3 py-2 font-sans text-sm text-text outline-none focus:border-terracotta focus:ring-1 focus:ring-terracotta/30";
 
@@ -313,6 +385,37 @@ function AddExerciseForm({
         <input className={fieldCls} placeholder="RPE" value={rpe} onChange={(e) => setRpe(e.target.value)} />
         <input className={fieldCls} placeholder="Rest (s)" inputMode="numeric" value={rest} onChange={(e) => setRest(e.target.value)} />
       </div>
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <input className={fieldCls} placeholder="Tempo (2-0-3-0)" value={tempo} onChange={(e) => setTempo(e.target.value)} />
+        <input
+          className={`${fieldCls} disabled:opacity-40`}
+          placeholder="% 1RM"
+          inputMode="decimal"
+          value={percent}
+          onChange={(e) => setPercent(e.target.value)}
+          disabled={!usePercent}
+        />
+      </div>
+      <div className="mt-2 flex flex-wrap gap-4">
+        <label className="flex items-center gap-2 font-sans text-sm text-text">
+          <input
+            type="checkbox"
+            checked={usePercent}
+            onChange={(e) => setUsePercent(e.target.checked)}
+            className="h-4 w-4 accent-terracotta"
+          />
+          Use % of 1RM
+        </label>
+        <label className="flex items-center gap-2 font-sans text-sm text-text">
+          <input
+            type="checkbox"
+            checked={eachSide}
+            onChange={(e) => setEachSide(e.target.checked)}
+            className="h-4 w-4 accent-terracotta"
+          />
+          Each side
+        </label>
+      </div>
       <input
         className={`${fieldCls} mt-2`}
         placeholder="Notes (optional)"
@@ -323,7 +426,7 @@ function AddExerciseForm({
         <PortalButton variant="secondary" onClick={onCancel} className="flex-1">
           Cancel
         </PortalButton>
-        <PortalButton onClick={save} disabled={!exerciseId || saving} className="flex-1">
+        <PortalButton onClick={onSave} disabled={!exerciseId || saving} className="flex-1">
           {saving ? "Adding…" : "Add"}
         </PortalButton>
       </div>

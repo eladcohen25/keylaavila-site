@@ -5,6 +5,7 @@ import { getSupabaseBrowser } from "@/lib/supabase-browser";
 import { currentWeekMonday, type Exercise } from "@/lib/portal/types";
 import { assignProgram, duplicateLastWeek } from "@/lib/trainer/assign";
 import { Card, PortalButton, TextInput } from "@/components/portal/ui";
+import { ExercisePrescriptionForm } from "@/app/trainer/programs/[id]/page";
 
 interface Program {
   id: string;
@@ -19,6 +20,10 @@ interface AssignedExerciseRow {
   target_rpe: string | null;
   rest_seconds: number | null;
   notes: string | null;
+  use_percent: boolean;
+  tempo: string | null;
+  percent_1rm: number | null;
+  each_side: boolean;
   exercise: Exercise | null;
 }
 interface AssignedWorkoutRow {
@@ -249,8 +254,11 @@ export default function AssignPanel({ clientId }: { clientId: string }) {
                       <p className="font-sans text-sm font-medium text-text">{ae.exercise?.name}</p>
                       <p className="font-sans text-xs text-text-muted">
                         {ae.target_sets ?? "?"} × {ae.target_reps ?? "?"}
+                        {ae.use_percent && ae.percent_1rm != null ? ` · ${ae.percent_1rm}% 1RM` : ""}
                         {ae.target_rpe ? ` · RPE ${ae.target_rpe}` : ""}
                         {ae.rest_seconds != null ? ` · ${ae.rest_seconds}s rest` : ""}
+                        {ae.tempo ? ` · tempo ${ae.tempo}` : ""}
+                        {ae.each_side ? " · each side" : ""}
                       </p>
                     </div>
                     <button
@@ -317,6 +325,10 @@ function AddAssignedExercise({
   const [rpe, setRpe] = useState("");
   const [rest, setRest] = useState("");
   const [notes, setNotes] = useState("");
+  const [usePercent, setUsePercent] = useState(false);
+  const [percent, setPercent] = useState("");
+  const [tempo, setTempo] = useState("");
+  const [eachSide, setEachSide] = useState(false);
   const [saving, setSaving] = useState(false);
 
   function pick(id: string) {
@@ -325,6 +337,8 @@ function AddAssignedExercise({
     if (ex) {
       if (ex.default_sets != null) setSets(String(ex.default_sets));
       if (ex.default_reps) setReps(ex.default_reps);
+      setTempo(ex.tempo ?? "");
+      setEachSide(ex.is_unilateral);
     }
   }
 
@@ -341,6 +355,10 @@ function AddAssignedExercise({
       target_rpe: rpe.trim() || null,
       rest_seconds: rest === "" ? null : Number(rest),
       notes: notes.trim() || null,
+      use_percent: usePercent,
+      percent_1rm: usePercent && percent !== "" ? Number(percent) : null,
+      tempo: tempo.trim() || null,
+      each_side: eachSide,
     });
     setSaving(false);
     setOpen(false);
@@ -350,11 +368,12 @@ function AddAssignedExercise({
     setRpe("");
     setRest("");
     setNotes("");
+    setUsePercent(false);
+    setPercent("");
+    setTempo("");
+    setEachSide(false);
     onAdded();
   }
-
-  const fieldCls =
-    "w-full rounded-lg border border-border bg-white px-3 py-2 font-sans text-sm text-text outline-none focus:border-terracotta focus:ring-1 focus:ring-terracotta/30";
 
   if (!open) {
     return (
@@ -368,36 +387,22 @@ function AddAssignedExercise({
   }
 
   return (
-    <div className="mt-3 rounded-lg border border-border bg-bg p-3">
-      <select value={exerciseId} onChange={(e) => pick(e.target.value)} className={fieldCls}>
-        <option value="">Choose an exercise…</option>
-        {library.map((e) => (
-          <option key={e.id} value={e.id}>
-            {e.name}
-            {e.muscle_group ? ` (${e.muscle_group})` : ""}
-          </option>
-        ))}
-      </select>
-      <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <input className={fieldCls} placeholder="Sets" inputMode="numeric" value={sets} onChange={(e) => setSets(e.target.value)} />
-        <input className={fieldCls} placeholder="Reps" value={reps} onChange={(e) => setReps(e.target.value)} />
-        <input className={fieldCls} placeholder="RPE" value={rpe} onChange={(e) => setRpe(e.target.value)} />
-        <input className={fieldCls} placeholder="Rest (s)" inputMode="numeric" value={rest} onChange={(e) => setRest(e.target.value)} />
-      </div>
-      <input
-        className={`${fieldCls} mt-2`}
-        placeholder="Notes (optional)"
-        value={notes}
-        onChange={(e) => setNotes(e.target.value)}
-      />
-      <div className="mt-3 flex gap-2">
-        <PortalButton variant="secondary" onClick={() => setOpen(false)} className="flex-1">
-          Cancel
-        </PortalButton>
-        <PortalButton onClick={save} disabled={!exerciseId || saving} className="flex-1">
-          {saving ? "Adding…" : "Add"}
-        </PortalButton>
-      </div>
-    </div>
+    <ExercisePrescriptionForm
+      library={library}
+      exerciseId={exerciseId}
+      onPick={pick}
+      sets={sets} setSets={setSets}
+      reps={reps} setReps={setReps}
+      rpe={rpe} setRpe={setRpe}
+      rest={rest} setRest={setRest}
+      notes={notes} setNotes={setNotes}
+      usePercent={usePercent} setUsePercent={setUsePercent}
+      percent={percent} setPercent={setPercent}
+      tempo={tempo} setTempo={setTempo}
+      eachSide={eachSide} setEachSide={setEachSide}
+      saving={saving}
+      onCancel={() => setOpen(false)}
+      onSave={save}
+    />
   );
 }

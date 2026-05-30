@@ -6,6 +6,7 @@ export interface EmailSetLog {
   weight: number | null;
   reps: number | null;
   rpe: number | null;
+  percent_1rm?: number | null;
   done: boolean;
 }
 
@@ -28,8 +29,9 @@ function setLine(s: EmailSetLog): string {
   const parts: string[] = [];
   parts.push(s.weight != null ? `${s.weight} lb` : "—");
   parts.push(s.reps != null ? `${s.reps} reps` : "— reps");
+  if (s.percent_1rm != null) parts.push(`(${s.percent_1rm}% 1RM)`);
   if (s.rpe != null) parts.push(`@ RPE ${s.rpe}`);
-  const text = parts.join(" × ").replace("× @", "@");
+  const text = parts.join(" × ").replace(/× @/g, "@").replace(/× \(/g, "(");
   const check = s.done ? "✓" : "○";
   return `<span style="color:${s.done ? "#1C1917" : "#A89A8F"};">${check} Set ${s.set_number}: ${text}</span>`;
 }

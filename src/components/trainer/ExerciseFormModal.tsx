@@ -24,6 +24,8 @@ export default function ExerciseFormModal({
     initial?.default_sets != null ? String(initial.default_sets) : ""
   );
   const [defaultReps, setDefaultReps] = useState(initial?.default_reps ?? "");
+  const [tempo, setTempo] = useState(initial?.tempo ?? "");
+  const [isUnilateral, setIsUnilateral] = useState(initial?.is_unilateral ?? false);
   const [cueNotes, setCueNotes] = useState(initial?.cue_notes ?? "");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -43,6 +45,8 @@ export default function ExerciseFormModal({
       video_url: videoUrl.trim() || null,
       default_sets: defaultSets === "" ? null : Number(defaultSets),
       default_reps: defaultReps.trim() || null,
+      tempo: tempo.trim() || null,
+      is_unilateral: isUnilateral,
       cue_notes: cueNotes.trim() || null,
     };
 
@@ -87,7 +91,21 @@ export default function ExerciseFormModal({
             <Field label="Default reps">
               <TextInput value={defaultReps} onChange={(e) => setDefaultReps(e.target.value)} placeholder="10-12" />
             </Field>
+            <Field label="Tempo" hint="Eccentric-pause-concentric-pause (optional)">
+              <TextInput value={tempo} onChange={(e) => setTempo(e.target.value)} placeholder="2-0-3-0" />
+            </Field>
           </div>
+          <label className="flex items-center gap-3 rounded-lg border border-border bg-bg px-4 py-3">
+            <input
+              type="checkbox"
+              checked={isUnilateral}
+              onChange={(e) => setIsUnilateral(e.target.checked)}
+              className="h-4 w-4 accent-terracotta"
+            />
+            <span className="font-sans text-sm text-text">
+              Unilateral (logged each side)
+            </span>
+          </label>
           <Field label="Video URL" hint="YouTube / Vimeo / direct link (optional)">
             <TextInput value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://…" />
           </Field>
