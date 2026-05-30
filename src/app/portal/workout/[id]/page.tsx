@@ -1058,7 +1058,7 @@ function VideoModal({ url, onClose }: { url: string; onClose: () => void }) {
 export default function WorkoutPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   return (
-    <PortalGate>
+    <PortalGate hideHeader>
       <WorkoutInner id={id} />
     </PortalGate>
   );
