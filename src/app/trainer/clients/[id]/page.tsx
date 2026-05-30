@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import TrainerLayout from "@/components/trainer/TrainerLayout";
 import AssignPanel from "@/components/trainer/AssignPanel";
+import NutritionEditor from "@/components/trainer/NutritionEditor";
 import { getSupabaseBrowser } from "@/lib/supabase-browser";
 import {
   formatDuration,
@@ -13,7 +14,7 @@ import {
   type HealthIntake,
   type LiabilityWaiver,
 } from "@/lib/portal/types";
-import { Card, Spinner } from "@/components/portal/ui";
+import { Card, Spinner, ErrorBanner } from "@/components/portal/ui";
 
 interface CheckIn {
   id: string;
@@ -52,7 +53,7 @@ interface Session {
   set_logs: SetLog[];
 }
 
-type Tab = "overview" | "assign" | "checkins" | "workouts";
+type Tab = "overview" | "assign" | "nutrition" | "checkins" | "workouts";
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
@@ -129,6 +130,7 @@ function ClientDetail({ id }: { id: string }) {
   const tabs: { id: Tab; label: string }[] = [
     { id: "overview", label: "Overview" },
     { id: "assign", label: "Assign" },
+    { id: "nutrition", label: "Nutrition" },
     { id: "checkins", label: `Check-ins${checkins.length ? ` (${checkins.length})` : ""}` },
     { id: "workouts", label: `Workouts${sessions.length ? ` (${sessions.length})` : ""}` },
   ];
@@ -171,22 +173,93 @@ function ClientDetail({ id }: { id: string }) {
         ))}
       </div>
 
-      {tab === "overview" && <Overview intake={intake} waiver={waiver} />}
+      {tab === "overview" && (
+        <Overview intake={intake} waiver={waiver} clientId={id} clientName={profile.full_name} />
+      )}
       {tab === "assign" && <AssignPanel clientId={id} />}
+      {tab === "nutrition" && <NutritionEditor clientId={id} />}
       {tab === "checkins" && <CheckIns checkins={checkins} />}
       {tab === "workouts" && <Workouts sessions={sessions} />}
     </>
   );
 }
 
+function DangerZone({ clientId, clientName }: { clientId: string; clientName: string | null }) {
+  const router = useRouter();
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState("");
+
+  async function deleteClient() {
+    const label = clientName || "this client";
+    if (
+      !confirm(
+        `Permanently delete ${label}? This removes their account, workouts, logs, intake, waiver, and nutrition plan. This cannot be undone.`
+      )
+    )
+      return;
+    setDeleting(true);
+    setError("");
+
+    const supabase = getSupabaseBrowser();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
+      setError("Session expired. Please log in again.");
+      setDeleting(false);
+      return;
+    }
+
+    const res = await fetch("/api/trainer/delete-client", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ client_id: clientId }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || !json.ok) {
+      setError(json.error || "Could not delete client.");
+      setDeleting(false);
+      return;
+    }
+    router.replace("/trainer");
+  }
+
+  return (
+    <Card className="mt-5 border-burgundy/30">
+      <h2 className="font-sans text-xs font-semibold uppercase tracking-wider text-burgundy">
+        Danger zone
+      </h2>
+      <p className="mt-2 font-sans text-sm text-text-muted">
+        Permanently delete this client and all of their data.
+      </p>
+      <ErrorBanner message={error} />
+      <button
+        onClick={deleteClient}
+        disabled={deleting}
+        className="mt-3 inline-flex items-center gap-2 rounded-lg border border-burgundy/40 px-4 py-2.5 font-sans text-sm font-medium text-burgundy transition hover:bg-burgundy hover:text-white disabled:opacity-50"
+      >
+        {deleting ? "Deleting…" : "Delete client"}
+      </button>
+    </Card>
+  );
+}
+
 function Overview({
   intake,
   waiver,
+  clientId,
+  clientName,
 }: {
   intake: HealthIntake | null;
   waiver: LiabilityWaiver | null;
+  clientId: string;
+  clientName: string | null;
 }) {
   return (
+    <>
     <div className="grid gap-5 lg:grid-cols-2">
       <Card>
         <h2 className="mb-4 font-sans text-xs font-semibold uppercase tracking-wider text-text-muted">
@@ -230,6 +303,8 @@ function Overview({
         )}
       </Card>
     </div>
+    <DangerZone clientId={clientId} clientName={clientName} />
+    </>
   );
 }
 
