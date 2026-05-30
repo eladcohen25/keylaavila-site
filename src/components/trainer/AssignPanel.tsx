@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getSupabaseBrowser } from "@/lib/supabase-browser";
-import { currentWeekMonday, type Exercise } from "@/lib/portal/types";
+import { currentWeekMonday, formatDayLabel, type Exercise } from "@/lib/portal/types";
 import { assignProgram, duplicateLastWeek } from "@/lib/trainer/assign";
 import { Card, PortalButton, TextInput } from "@/components/portal/ui";
 import { ExercisePrescriptionForm } from "@/app/trainer/programs/[id]/page";
@@ -29,6 +29,7 @@ interface AssignedExerciseRow {
 interface AssignedWorkoutRow {
   id: string;
   day_label: string;
+  scheduled_date: string | null;
   status: string;
   order_index: number;
   assigned_exercises: AssignedExerciseRow[];
@@ -49,6 +50,7 @@ export default function AssignPanel({ clientId }: { clientId: string }) {
   const [busy, setBusy] = useState(false);
   const [programId, setProgramId] = useState("");
   const [newDayLabel, setNewDayLabel] = useState("");
+  const [newDate, setNewDate] = useState("");
   const [msg, setMsg] = useState("");
 
   const loadWeek = useCallback(async () => {
@@ -60,12 +62,21 @@ export default function AssignPanel({ clientId }: { clientId: string }) {
       .eq("client_id", clientId)
       .eq("week_of", weekOf)
       .order("order_index", { ascending: true });
-    const sorted = ((data as AssignedWorkoutRow[]) ?? []).map((w) => ({
-      ...w,
-      assigned_exercises: [...(w.assigned_exercises ?? [])].sort(
-        (a, b) => a.order_index - b.order_index
-      ),
-    }));
+    const sorted = ((data as AssignedWorkoutRow[]) ?? [])
+      .map((w) => ({
+        ...w,
+        assigned_exercises: [...(w.assigned_exercises ?? [])].sort(
+          (a, b) => a.order_index - b.order_index
+        ),
+      }))
+      .sort((a, b) => {
+        const da = a.scheduled_date ?? "";
+        const db = b.scheduled_date ?? "";
+        if (da && db && da !== db) return da < db ? -1 : 1;
+        if (da && !db) return -1;
+        if (!da && db) return 1;
+        return a.order_index - b.order_index;
+      });
     setWorkouts(sorted);
     setLoading(false);
   }, [clientId, weekOf]);
@@ -113,16 +124,27 @@ export default function AssignPanel({ clientId }: { clientId: string }) {
     if (!newDayLabel.trim()) return;
     setBusy(true);
     const supabase = getSupabaseBrowser();
+    // If a specific date is chosen, pin the workout to that day and put it in
+    // that date's week (so it shows up on the client's dashboard that week).
+    const targetWeek = newDate ? currentWeekMonday(new Date(newDate + "T00:00:00")) : weekOf;
     await supabase.from("assigned_workouts").insert({
       client_id: clientId,
-      week_of: weekOf,
+      week_of: targetWeek,
+      scheduled_date: newDate || null,
       day_label: newDayLabel.trim(),
       status: "assigned",
       order_index: workouts.length,
     });
     setBusy(false);
     setNewDayLabel("");
-    loadWeek();
+    // Jump to the week we just assigned into so it's visible right away.
+    if (newDate && targetWeek !== weekOf) {
+      setWeekOf(targetWeek);
+    } else {
+      loadWeek();
+    }
+    setNewDate("");
+    flash(newDate ? `Workout added for ${formatDayLabel(newDate)}.` : "Workout added for this week.");
   }
 
   async function deleteWorkout(id: string) {
@@ -221,8 +243,17 @@ export default function AssignPanel({ clientId }: { clientId: string }) {
         workouts.map((w) => (
           <Card key={w.id}>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <h3 className="font-serif text-lg font-light text-text">{w.day_label}</h3>
+                {w.scheduled_date && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-terracotta/10 px-2 py-0.5 font-sans text-[11px] font-medium text-terracotta">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="4" width="18" height="18" rx="2" />
+                      <path d="M16 2v4M8 2v4M3 10h18" />
+                    </svg>
+                    {formatDayLabel(w.scheduled_date)}
+                  </span>
+                )}
                 <span
                   className={`rounded-full px-2 py-0.5 font-sans text-[10px] font-medium uppercase tracking-wider ${
                     w.status === "completed"
@@ -282,26 +313,44 @@ export default function AssignPanel({ clientId }: { clientId: string }) {
         ))
       )}
 
-      {/* Add blank day */}
+      {/* Quick assign a workout */}
       <Card>
+        <h3 className="mb-3 font-sans text-xs font-semibold uppercase tracking-wider text-text-muted">
+          Quick assign a workout
+        </h3>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="flex-1">
-            <label className="mb-1.5 block font-sans text-xs font-medium uppercase tracking-wider text-text-muted">
-              Add a blank workout (ad hoc)
+            <label className="mb-1.5 block font-sans text-xs font-medium text-text-muted">
+              Label
             </label>
             <TextInput
               value={newDayLabel}
               onChange={(e) => setNewDayLabel(e.target.value)}
-              placeholder="Day 1 - Push"
+              placeholder="Push Day, Leg Session, In-Person…"
               onKeyDown={(e) => {
                 if (e.key === "Enter") addBlank();
               }}
+            />
+          </div>
+          <div className="sm:w-44">
+            <label className="mb-1.5 block font-sans text-xs font-medium text-text-muted">
+              Day (optional)
+            </label>
+            <input
+              type="date"
+              value={newDate}
+              onChange={(e) => setNewDate(e.target.value)}
+              className="w-full rounded-lg border border-border bg-white px-3 py-3 font-sans text-sm text-text outline-none transition focus:border-terracotta focus:ring-1 focus:ring-terracotta/30"
             />
           </div>
           <PortalButton onClick={addBlank} disabled={!newDayLabel.trim() || busy}>
             Add
           </PortalButton>
         </div>
+        <p className="mt-2 font-sans text-xs text-text-muted">
+          Pick a day to pin this session to a specific date (it shows on the client&apos;s dashboard that
+          week). Leave the day blank to add it to the selected week.
+        </p>
       </Card>
     </div>
   );

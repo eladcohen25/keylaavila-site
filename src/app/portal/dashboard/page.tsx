@@ -5,7 +5,7 @@ import Link from "next/link";
 import PortalGate from "@/components/portal/PortalGate";
 import { useProfile } from "@/hooks/useProfile";
 import { getSupabaseBrowser } from "@/lib/supabase-browser";
-import { currentWeekMonday, type AssignedWorkout } from "@/lib/portal/types";
+import { currentWeekMonday, formatDayLabel, type AssignedWorkout } from "@/lib/portal/types";
 import { Card, Spinner } from "@/components/portal/ui";
 
 const STATUS_STYLES: Record<string, string> = {
@@ -35,7 +35,15 @@ function DashboardInner() {
         .eq("client_id", profile.id)
         .eq("week_of", currentWeekMonday())
         .order("order_index", { ascending: true });
-      setWorkouts((data as AssignedWorkout[]) ?? []);
+      const sorted = ((data as AssignedWorkout[]) ?? []).sort((a, b) => {
+        const da = a.scheduled_date ?? "";
+        const db = b.scheduled_date ?? "";
+        if (da && db && da !== db) return da < db ? -1 : 1;
+        if (da && !db) return -1;
+        if (!da && db) return 1;
+        return a.order_index - b.order_index;
+      });
+      setWorkouts(sorted);
       setLoading(false);
     })();
   }, [profile]);
@@ -82,6 +90,11 @@ function DashboardInner() {
                   }`}
                 >
                   <div>
+                    {w.scheduled_date && (
+                      <p className="mb-0.5 font-sans text-[11px] font-semibold uppercase tracking-wider text-terracotta">
+                        {formatDayLabel(w.scheduled_date)}
+                      </p>
+                    )}
                     <h3 className="font-sans text-base font-medium text-text">
                       {w.day_label}
                     </h3>

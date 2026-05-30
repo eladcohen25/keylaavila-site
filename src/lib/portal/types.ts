@@ -58,6 +58,7 @@ export interface AssignedWorkout {
   client_id: string;
   program_id: string | null;
   week_of: string;
+  scheduled_date: string | null;
   day_label: string;
   status: WorkoutStatus;
   order_index: number;
@@ -177,6 +178,15 @@ export function toEmbedUrl(url: string): string | null {
 /** True if the URL points at a directly-playable video file. */
 export function isDirectVideo(url: string): boolean {
   return /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(url);
+}
+
+/** "Mon, Jun 1" style label for a YYYY-MM-DD date string. */
+export function formatDayLabel(dateStr: string): string {
+  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 export function formatDuration(seconds: number): string {
