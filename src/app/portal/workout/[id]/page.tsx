@@ -87,6 +87,7 @@ function WorkoutInner({ id }: { id: string }) {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
   const [playingVideo, setPlayingVideo] = useState<string | null>(null);
+  const [rest, setRest] = useState<{ exId: string; setIdx: number; restSeconds: number; name: string } | null>(null);
   const hydrated = useRef(false);
 
   // ─── Load workout + exercises + maxes + last-time, restore local backup ────
@@ -282,6 +283,36 @@ function WorkoutInner({ id }: { id: string }) {
       return { ...prev, [exId]: { ...ex, sets: ex.sets.filter((_, i) => i !== setIdx) } };
     });
   }, []);
+
+  // Toggle a set's done state; when newly completed, launch the rest timer.
+  const toggleSetDone = useCallback(
+    (exId: string, setIdx: number) => {
+      const ex = state[exId];
+      if (!ex) return;
+      const willBeDone = !ex.sets[setIdx].done;
+      updateSet(exId, setIdx, { done: willBeDone });
+      if (willBeDone) {
+        const aex = exercises.find((e) => e.id === exId);
+        setRest({
+          exId,
+          setIdx,
+          restSeconds: aex?.rest_seconds ?? 60,
+          name: aex?.exercise?.name ?? "Rest",
+        });
+      }
+    },
+    [state, exercises, updateSet]
+  );
+
+  const finishRest = useCallback(
+    (restTaken: number) => {
+      setRest((r) => {
+        if (r) updateSet(r.exId, r.setIdx, { rest_taken_seconds: restTaken });
+        return null;
+      });
+    },
+    [updateSet]
+  );
 
   // ─── Swipe navigation ────────────────────────────────────────────────────
   const touchX = useRef<number | null>(null);
@@ -508,6 +539,7 @@ function WorkoutInner({ id }: { id: string }) {
           onMarkAll={() => markAll(ae.id)}
           onAddSet={() => addSet(ae.id)}
           onRemoveSet={(idx) => removeSet(ae.id, idx)}
+          onToggleDone={(idx) => toggleSetDone(ae.id, idx)}
           onPlayVideo={setPlayingVideo}
         />
 
@@ -538,6 +570,15 @@ function WorkoutInner({ id }: { id: string }) {
       </div>
 
       {playingVideo && <VideoModal url={playingVideo} onClose={() => setPlayingVideo(null)} />}
+
+      {rest && (
+        <RestOverlay
+          key={`${rest.exId}-${rest.setIdx}`}
+          restSeconds={rest.restSeconds}
+          exerciseName={rest.name}
+          onFinish={finishRest}
+        />
+      )}
     </div>
   );
 }
@@ -553,6 +594,7 @@ function ExerciseCard({
   onMarkAll,
   onAddSet,
   onRemoveSet,
+  onToggleDone,
   onPlayVideo,
 }: {
   ae: LoadedExercise;
@@ -563,6 +605,7 @@ function ExerciseCard({
   onMarkAll: () => void;
   onAddSet: () => void;
   onRemoveSet: (idx: number) => void;
+  onToggleDone: (idx: number) => void;
   onPlayVideo: (url: string) => void;
 }) {
   const ex = ae.exercise;
@@ -738,6 +781,7 @@ function ExerciseCard({
                 isActive={i === activeIdx}
                 restSeconds={ae.rest_seconds ?? 60}
                 onUpdate={(patch) => onUpdateSet(i, patch)}
+                onToggleDone={() => onToggleDone(i)}
                 onRemove={state.sets.length > 1 ? () => onRemoveSet(i) : undefined}
               />
             ))}
@@ -833,6 +877,7 @@ function SetRow({
   isActive,
   restSeconds,
   onUpdate,
+  onToggleDone,
   onRemove,
 }: {
   index: number;
@@ -844,6 +889,7 @@ function SetRow({
   isActive: boolean;
   restSeconds: number;
   onUpdate: (patch: Partial<SetState>) => void;
+  onToggleDone: () => void;
   onRemove?: () => void;
 }) {
   const inputClass =
@@ -918,7 +964,7 @@ function SetRow({
         />
 
         <button
-          onClick={() => onUpdate({ done: !set.done })}
+          onClick={onToggleDone}
           className={`mx-auto flex h-9 w-9 items-center justify-center rounded-full border transition ${
             set.done
               ? "border-olive bg-olive text-white"
@@ -1004,6 +1050,108 @@ function RestCell({
     >
       {label}
     </button>
+  );
+}
+
+/** Full-screen rest timer: auto-starts when a set is checked, with a Skip. */
+function RestOverlay({
+  restSeconds,
+  exerciseName,
+  onFinish,
+}: {
+  restSeconds: number;
+  exerciseName: string;
+  onFinish: (restTaken: number) => void;
+}) {
+  const [total, setTotal] = useState(restSeconds);
+  const [remaining, setRemaining] = useState(restSeconds);
+  const startRef = useRef<number>(Date.now());
+  const totalRef = useRef<number>(restSeconds);
+  const doneRef = useRef(false);
+
+  useEffect(() => {
+    totalRef.current = total;
+  }, [total]);
+
+  useEffect(() => {
+    const tick = () => {
+      const el = Math.floor((Date.now() - startRef.current) / 1000);
+      const left = Math.max(0, totalRef.current - el);
+      setRemaining(left);
+      if (left === 0 && !doneRef.current) {
+        doneRef.current = true;
+        onFinish(totalRef.current);
+      }
+    };
+    tick();
+    const t = setInterval(tick, 250);
+    return () => clearInterval(t);
+  }, [onFinish]);
+
+  function skip() {
+    if (doneRef.current) return;
+    doneRef.current = true;
+    const el = Math.floor((Date.now() - startRef.current) / 1000);
+    onFinish(el);
+  }
+
+  const pct = total > 0 ? remaining / total : 0;
+  const R = 130;
+  const C = 2 * Math.PI * R;
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-text px-6 py-12 text-bg">
+      <p className="font-sans text-[11px] uppercase tracking-[0.22em] text-bg/60">Rest</p>
+
+      <div className="relative flex flex-1 items-center justify-center">
+        <svg width="300" height="300" viewBox="0 0 300 300" className="-rotate-90">
+          <circle cx="150" cy="150" r={R} fill="none" stroke="rgba(245,240,234,0.12)" strokeWidth="10" />
+          <circle
+            cx="150"
+            cy="150"
+            r={R}
+            fill="none"
+            stroke="#C4714A"
+            strokeWidth="10"
+            strokeLinecap="round"
+            strokeDasharray={C}
+            strokeDashoffset={C * (1 - pct)}
+            style={{ transition: "stroke-dashoffset 0.25s linear" }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="font-serif text-6xl font-light tabular-nums text-bg">
+            {formatRest(remaining)}
+          </span>
+          <span className="mt-2 max-w-[200px] truncate font-sans text-sm text-bg/60">
+            {exerciseName}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex w-full max-w-sm flex-col items-center gap-4">
+        <div className="flex gap-3">
+          <button
+            onClick={() => setTotal((t) => Math.max(remaining + 1, t - 15))}
+            className="rounded-full border border-bg/25 px-4 py-2 font-sans text-sm font-medium text-bg/80 transition hover:bg-white/10"
+          >
+            −15s
+          </button>
+          <button
+            onClick={() => setTotal((t) => t + 15)}
+            className="rounded-full border border-bg/25 px-4 py-2 font-sans text-sm font-medium text-bg/80 transition hover:bg-white/10"
+          >
+            +15s
+          </button>
+        </div>
+        <button
+          onClick={skip}
+          className="w-full rounded-xl bg-terracotta py-4 font-sans text-base font-medium text-white transition hover:bg-terracotta/90"
+        >
+          Skip rest
+        </button>
+      </div>
+    </div>
   );
 }
 
