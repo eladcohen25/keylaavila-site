@@ -11,6 +11,7 @@ import {
   weightFromPercent,
   toEmbedUrl,
   isDirectVideo,
+  getVideoThumb,
   type AssignedWorkout,
   type AssignedExercise,
   type Exercise,
@@ -596,7 +597,8 @@ function ExerciseCard({
         disabled={!ex?.video_url}
         className="group relative flex aspect-video w-full items-center justify-center overflow-hidden bg-gradient-to-br from-text to-[#3a322e] disabled:cursor-default"
       >
-        <div className="absolute inset-0 opacity-30 [background-image:radial-gradient(circle_at_30%_30%,rgba(196,113,74,0.5),transparent_60%)]" />
+        {ex?.video_url && <VideoThumbnail url={ex.video_url} />}
+        <div className="absolute inset-0 bg-black/10 transition group-hover:bg-black/0" />
         <span
           className={`relative flex h-16 w-16 items-center justify-center rounded-full bg-white/90 shadow-lg transition ${
             ex?.video_url ? "group-hover:scale-105 group-hover:bg-white" : "opacity-40"
@@ -1003,6 +1005,59 @@ function RestCell({
       {label}
     </button>
   );
+}
+
+/** Demo-video thumbnail: YouTube poster, Vimeo (async oEmbed), or first frame. */
+function VideoThumbnail({ url }: { url: string }) {
+  const thumb = useMemo(() => getVideoThumb(url), [url]);
+  const [vimeoSrc, setVimeoSrc] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    if (thumb.type !== "vimeo") return;
+    let active = true;
+    fetch(`https://vimeo.com/api/oembed.json?url=${encodeURIComponent(url)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (active && data?.thumbnail_url) setVimeoSrc(data.thumbnail_url as string);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [thumb, url]);
+
+  if (failed) return null;
+
+  const imgSrc =
+    thumb.type === "image" ? thumb.src : thumb.type === "vimeo" ? vimeoSrc : null;
+
+  if (imgSrc) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return (
+      <img
+        src={imgSrc}
+        alt=""
+        className="absolute inset-0 h-full w-full object-cover"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+
+  if (thumb.type === "video") {
+    return (
+      <video
+        src={`${thumb.src}#t=0.1`}
+        muted
+        playsInline
+        preload="metadata"
+        className="absolute inset-0 h-full w-full object-cover"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+
+  return null;
 }
 
 function VideoModal({ url, onClose }: { url: string; onClose: () => void }) {

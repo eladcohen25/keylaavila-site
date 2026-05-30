@@ -180,6 +180,41 @@ export function isDirectVideo(url: string): boolean {
   return /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(url);
 }
 
+export type VideoThumb =
+  | { type: "image"; src: string } // ready-to-use poster image URL
+  | { type: "video"; src: string } // direct file: render first frame
+  | { type: "vimeo"; id: string } // needs an async oEmbed lookup
+  | { type: "none" };
+
+/** Resolve a demo video URL to a thumbnail strategy. */
+export function getVideoThumb(url: string): VideoThumb {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, "");
+    const ytThumb = (id: string) => `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+    if (host === "youtu.be") {
+      const id = u.pathname.slice(1);
+      if (id) return { type: "image", src: ytThumb(id) };
+    }
+    if (host.endsWith("youtube.com")) {
+      const v = u.searchParams.get("v");
+      if (v) return { type: "image", src: ytThumb(v) };
+      const parts = u.pathname.split("/").filter(Boolean);
+      if (parts[0] === "embed" || parts[0] === "shorts") {
+        if (parts[1]) return { type: "image", src: ytThumb(parts[1]) };
+      }
+    }
+    if (host.endsWith("vimeo.com")) {
+      const id = u.pathname.split("/").filter(Boolean).pop();
+      if (id) return { type: "vimeo", id };
+    }
+  } catch {
+    return { type: "none" };
+  }
+  if (isDirectVideo(url)) return { type: "video", src: url };
+  return { type: "none" };
+}
+
 /** "Mon, Jun 1" style label for a YYYY-MM-DD date string. */
 export function formatDayLabel(dateStr: string): string {
   return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
