@@ -7,6 +7,7 @@ import { signOut } from "@/hooks/useSession";
 
 const NAV = [
   { href: "/portal/dashboard", label: "Home" },
+  { href: "/portal/calendar", label: "Calendar" },
   { href: "/portal/nutrition", label: "Nutrition" },
   { href: "/portal/profile", label: "Profile" },
 ];

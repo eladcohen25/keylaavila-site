@@ -9,6 +9,7 @@ import { Spinner } from "@/components/portal/ui";
 
 const NAV = [
   { href: "/trainer", label: "Clients", match: (p: string) => p === "/trainer" || p.startsWith("/trainer/clients") },
+  { href: "/trainer/calendar", label: "Calendar", match: (p: string) => p.startsWith("/trainer/calendar") },
   { href: "/trainer/exercises", label: "Exercises", match: (p: string) => p.startsWith("/trainer/exercises") },
   { href: "/trainer/programs", label: "Programs", match: (p: string) => p.startsWith("/trainer/programs") },
 ];

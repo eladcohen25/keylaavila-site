@@ -1,4 +1,5 @@
 import { getSupabaseBrowser } from "@/lib/supabase-browser";
+import { currentWeekMonday, ymd } from "@/lib/portal/types";
 
 /**
  * Assign a saved program to a client for a given week.
@@ -67,6 +68,88 @@ export async function assignProgram(
       await supabase.from("assigned_exercises").insert(rows);
     }
   }
+}
+
+/**
+ * Assign a saved program starting on a specific calendar date, laying each
+ * program day on consecutive days (Day 1 = startDate, Day 2 = next day, …).
+ * Each workout gets scheduled_date + the matching week_of so it shows on the
+ * client's dashboard and calendar. Returns the number of workouts created.
+ */
+export async function assignProgramFromDate(
+  clientId: string,
+  programId: string,
+  startDate: string
+): Promise<number> {
+  const supabase = getSupabaseBrowser();
+
+  const { data: days } = await supabase
+    .from("program_days")
+    .select("*, program_exercises(*)")
+    .eq("program_id", programId)
+    .order("order_index", { ascending: true });
+
+  let count = 0;
+  const dayList = (days ?? []) as Array<{
+    day_label: string;
+    order_index: number;
+    program_exercises: Array<{
+      exercise_id: string;
+      order_index: number;
+      target_sets: number | null;
+      target_reps: string | null;
+      target_rpe: string | null;
+      rest_seconds: number | null;
+      notes: string | null;
+      use_percent: boolean | null;
+      tempo: string | null;
+      percent_1rm: number | null;
+      each_side: boolean | null;
+    }>;
+  }>;
+
+  for (let i = 0; i < dayList.length; i++) {
+    const day = dayList[i];
+    const date = new Date(startDate + "T00:00:00");
+    date.setDate(date.getDate() + i);
+    const dateStr = ymd(date);
+    const weekOf = currentWeekMonday(date);
+
+    const { data: aw } = await supabase
+      .from("assigned_workouts")
+      .insert({
+        client_id: clientId,
+        program_id: programId,
+        week_of: weekOf,
+        scheduled_date: dateStr,
+        day_label: day.day_label,
+        status: "assigned",
+        order_index: day.order_index,
+      })
+      .select("id")
+      .single();
+
+    if (!aw) continue;
+    count += 1;
+    const rows = (day.program_exercises ?? []).map((pe) => ({
+      assigned_workout_id: aw.id,
+      exercise_id: pe.exercise_id,
+      order_index: pe.order_index,
+      target_sets: pe.target_sets,
+      target_reps: pe.target_reps,
+      target_rpe: pe.target_rpe,
+      rest_seconds: pe.rest_seconds,
+      notes: pe.notes,
+      use_percent: pe.use_percent ?? false,
+      tempo: pe.tempo,
+      percent_1rm: pe.percent_1rm,
+      each_side: pe.each_side ?? false,
+    }));
+    if (rows.length > 0) {
+      await supabase.from("assigned_exercises").insert(rows);
+    }
+  }
+  return count;
 }
 
 /**

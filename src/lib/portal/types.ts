@@ -115,6 +115,37 @@ export interface ClientExerciseMax {
   updated_at: string;
 }
 
+export type CalendarEventType = "rest" | "session" | "appointment" | "checkin" | "other";
+
+export interface CalendarEvent {
+  id: string;
+  client_id: string;
+  event_date: string;
+  type: CalendarEventType;
+  title: string;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface DayNote {
+  id: string;
+  client_id: string;
+  note_date: string;
+  note: string;
+  author_role: "trainer" | "client";
+  created_by: string | null;
+  updated_at: string;
+}
+
+export const CALENDAR_EVENT_META: Record<CalendarEventType, { label: string; dot: string; chip: string }> = {
+  session: { label: "In-person session", dot: "bg-terracotta", chip: "bg-terracotta/10 text-terracotta" },
+  rest: { label: "Rest day", dot: "bg-olive", chip: "bg-olive/15 text-olive" },
+  appointment: { label: "Appointment", dot: "bg-burgundy", chip: "bg-blush text-burgundy" },
+  checkin: { label: "Check-in reminder", dot: "bg-burgundy", chip: "bg-blush text-burgundy" },
+  other: { label: "Other", dot: "bg-text-muted", chip: "bg-bg-alt text-text-muted" },
+};
+
 export interface NutritionPlan {
   id: string;
   client_id: string;
@@ -213,6 +244,58 @@ export function getVideoThumb(url: string): VideoThumb {
   }
   if (isDirectVideo(url)) return { type: "video", src: url };
   return { type: "none" };
+}
+
+/** Local YYYY-MM-DD for a Date (avoids UTC off-by-one from toISOString). */
+export function ymd(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/** Today as YYYY-MM-DD in local time. */
+export function todayYmd(): string {
+  return ymd(new Date());
+}
+
+/**
+ * 6-week (42-cell) matrix of YYYY-MM-DD strings for the month containing
+ * `monthAnchor`, starting on Sunday. Cells outside the month are still real
+ * dates (leading/trailing days) so the grid is always full.
+ */
+export function monthMatrix(monthAnchor: Date): string[][] {
+  const first = new Date(monthAnchor.getFullYear(), monthAnchor.getMonth(), 1);
+  const start = new Date(first);
+  start.setDate(1 - first.getDay()); // back up to Sunday
+  const weeks: string[][] = [];
+  const cursor = new Date(start);
+  for (let w = 0; w < 6; w++) {
+    const week: string[] = [];
+    for (let d = 0; d < 7; d++) {
+      week.push(ymd(cursor));
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    weeks.push(week);
+  }
+  return weeks;
+}
+
+export function addMonths(date: Date, delta: number): Date {
+  return new Date(date.getFullYear(), date.getMonth() + delta, 1);
+}
+
+export function monthLabel(date: Date): string {
+  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
+
+/** "Saturday, May 30" full label for a YYYY-MM-DD string. */
+export function formatFullDay(dateStr: string): string {
+  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
 }
 
 /** "Mon, Jun 1" style label for a YYYY-MM-DD date string. */

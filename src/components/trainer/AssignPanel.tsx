@@ -356,7 +356,7 @@ export default function AssignPanel({ clientId }: { clientId: string }) {
   );
 }
 
-function AddAssignedExercise({
+export function AddAssignedExercise({
   workoutId,
   library,
   nextOrder,
