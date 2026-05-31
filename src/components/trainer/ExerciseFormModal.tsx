@@ -25,6 +25,8 @@ export default function ExerciseFormModal({
   );
   const [defaultReps, setDefaultReps] = useState(initial?.default_reps ?? "");
   const [tempo, setTempo] = useState(initial?.tempo ?? "");
+  const [category, setCategory] = useState(initial?.category ?? "");
+  const [tags, setTags] = useState(initial?.tags ?? "");
   const [isUnilateral, setIsUnilateral] = useState(initial?.is_unilateral ?? false);
   const [cueNotes, setCueNotes] = useState(initial?.cue_notes ?? "");
   const [error, setError] = useState("");
@@ -46,6 +48,8 @@ export default function ExerciseFormModal({
       default_sets: defaultSets === "" ? null : Number(defaultSets),
       default_reps: defaultReps.trim() || null,
       tempo: tempo.trim() || null,
+      category: category.trim() || null,
+      tags: tags.trim() || null,
       is_unilateral: isUnilateral,
       cue_notes: cueNotes.trim() || null,
     };
@@ -73,8 +77,14 @@ export default function ExerciseFormModal({
             <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="Goblet Squat" />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Muscle group">
-              <TextInput value={muscle} onChange={(e) => setMuscle(e.target.value)} placeholder="Legs" />
+            <Field label="Primary muscles">
+              <TextInput value={muscle} onChange={(e) => setMuscle(e.target.value)} placeholder="Hamstrings, Glutes" />
+            </Field>
+            <Field label="Category">
+              <TextInput value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Upper Body Push" />
+            </Field>
+            <Field label="Secondary tags" hint="Comma-separated">
+              <TextInput value={tags} onChange={(e) => setTags(e.target.value)} placeholder="Strength, Posture" />
             </Field>
             <Field label="Equipment">
               <TextInput value={equipment} onChange={(e) => setEquipment(e.target.value)} placeholder="Dumbbell" />

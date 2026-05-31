@@ -47,6 +47,8 @@ export interface Exercise {
   cue_notes: string | null;
   tempo: string | null;
   is_unilateral: boolean;
+  category: string | null;
+  tags: string | null;
   created_by: string | null;
   created_at: string;
 }
