@@ -6,6 +6,7 @@ import TrainerLayout from "@/components/trainer/TrainerLayout";
 import { getSupabaseBrowser } from "@/lib/supabase-browser";
 import type { Profile } from "@/lib/portal/types";
 import { Card, Spinner } from "@/components/portal/ui";
+import Avatar from "@/components/portal/Avatar";
 
 interface ClientRow extends Profile {
   last_workout: string | null;
@@ -111,13 +112,16 @@ function ClientList() {
               className="group rounded-2xl border border-border bg-white p-5 text-left shadow-sm transition hover:border-terracotta/40 hover:shadow-md"
             >
               <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-sans text-base font-medium text-text group-hover:text-terracotta">
-                    {c.full_name || "Unnamed"}
-                  </h3>
-                  {c.email && (
-                    <p className="mt-0.5 font-sans text-xs text-text-muted">{c.email}</p>
-                  )}
+                <div className="flex items-center gap-3">
+                  <Avatar name={c.full_name} url={c.avatar_url} size={44} />
+                  <div>
+                    <h3 className="font-sans text-base font-medium text-text group-hover:text-terracotta">
+                      {c.full_name || "Unnamed"}
+                    </h3>
+                    {c.email && (
+                      <p className="mt-0.5 font-sans text-xs text-text-muted">{c.email}</p>
+                    )}
+                  </div>
                 </div>
                 <span
                   className={`shrink-0 rounded-full px-2 py-0.5 font-sans text-[10px] font-medium uppercase tracking-wider ${

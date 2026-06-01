@@ -9,12 +9,6 @@ function fmt(n: number | null, suffix = ""): string {
   return `${n}${suffix}`;
 }
 
-function pushColor(pref: CheckInRecord["push_preference"]): string {
-  if (pref === "push_more") return "#7D3A3A";
-  if (pref === "keep_same") return "#6B7355";
-  return "#C4714A";
-}
-
 function row(label: string, value: string): string {
   return `<tr>
     <td style="padding:8px 12px 8px 0;color:#6B5F57;font-size:13px;vertical-align:top;white-space:nowrap;">${label}</td>
@@ -36,8 +30,6 @@ export async function sendCheckInEmail(
     "Keyla Check-In <checkin@keylaavila.com>";
 
   const difficulty = CHECKIN_LABELS.session_difficulty[checkin.session_difficulty];
-  const pushLabel = CHECKIN_LABELS.push_preference[checkin.push_preference];
-  const pushClr = pushColor(checkin.push_preference);
   const recovery = CHECKIN_LABELS.recovery[checkin.recovery];
   const sessions =
     checkin.sessions_with_keyla >= 4
@@ -71,10 +63,6 @@ export async function sendCheckInEmail(
           <li style="margin-bottom:10px;font-size:14px;color:#1C1917;">
             <strong>Difficulty:</strong> ${difficulty}
           </li>
-          <li style="margin-bottom:10px;font-size:14px;color:#1C1917;">
-            <strong>Wants next week:</strong>
-            <span style="font-weight:700;color:${pushClr};"> ${pushLabel}</span>
-          </li>
           <li style="font-size:14px;color:#1C1917;">
             <strong>Recovery / Energy:</strong> ${recovery} / ${checkin.energy_mood}/5
           </li>
@@ -97,7 +85,6 @@ export async function sendCheckInEmail(
           ${row("Sessions with Keyla", sessions)}
           ${row("Solo session", checkin.solo_session ? CHECKIN_LABELS.solo_session[checkin.solo_session] : "—")}
           ${row("Difficulty", difficulty)}
-          ${row("Next week", `<span style="font-weight:700;color:${pushClr};">${pushLabel}</span>`)}
         </table>
 
         <h2 style="margin:24px 0 12px;font-size:13px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#C4714A;">Fuel & recovery</h2>

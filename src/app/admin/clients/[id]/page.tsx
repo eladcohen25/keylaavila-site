@@ -251,7 +251,9 @@ function CheckInHistory({ checkins }: { checkins: CheckIn[] }) {
               value={
                 CHECKIN_LABELS.push_preference[
                   c.push_preference as keyof typeof CHECKIN_LABELS.push_preference
-                ] || c.push_preference
+                ] ||
+                c.push_preference ||
+                "—"
               }
             />
             <MiniStat

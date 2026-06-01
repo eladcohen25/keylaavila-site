@@ -17,7 +17,7 @@ export interface CheckInRecord {
   sessions_with_keyla: number;
   solo_session: SoloSession | null;
   session_difficulty: SessionDifficulty;
-  push_preference: PushPreference;
+  push_preference: PushPreference | null;
   nutrition_rating: number;
   nutrition_notes: string | null;
   sleep_hours: number | null;
@@ -127,7 +127,16 @@ export function parseCheckInForm(form: FormData): {
     DIFFICULTY,
     missing
   );
-  const push_preference = parseEnum(form, "push_preference", PUSH, missing);
+  // push_preference is optional — only validate if a value was provided.
+  const pushRaw = form.get("push_preference");
+  let push_preference: PushPreference | null = null;
+  if (typeof pushRaw === "string" && pushRaw !== "") {
+    if (PUSH.includes(pushRaw as PushPreference)) {
+      push_preference = pushRaw as PushPreference;
+    } else {
+      missing.push("push_preference");
+    }
+  }
   const recovery = parseEnum(form, "recovery", RECOVERY, missing);
   const nutrition_rating = parseRating(form, "nutrition_rating", missing);
   const energy_mood = parseRating(form, "energy_mood", missing);
@@ -151,7 +160,7 @@ export function parseCheckInForm(form: FormData): {
       sessions_with_keyla: sessions_with_keyla!,
       solo_session,
       session_difficulty: session_difficulty!,
-      push_preference: push_preference!,
+      push_preference,
       nutrition_rating: nutrition_rating!,
       nutrition_notes:
         typeof form.get("nutrition_notes") === "string"

@@ -271,7 +271,6 @@ export default function CheckInForm({ clientId }: { clientId?: string }) {
   const [sessions, setSessions] = useState("");
   const [soloSession, setSoloSession] = useState("");
   const [difficulty, setDifficulty] = useState("");
-  const [pushPref, setPushPref] = useState("");
   const [nutritionRating, setNutritionRating] = useState<number | "">("");
   const [nutritionNotes, setNutritionNotes] = useState("");
   const [sleepHours, setSleepHours] = useState("");
@@ -322,7 +321,6 @@ export default function CheckInForm({ clientId }: { clientId?: string }) {
       setSessions("");
       setSoloSession("");
       setDifficulty("");
-      setPushPref("");
       setNutritionRating("");
       setNutritionNotes("");
       setSleepHours("");
@@ -477,27 +475,6 @@ export default function CheckInForm({ clientId }: { clientId?: string }) {
           />
         </div>
 
-        <div>
-          <p className={labelClasses}>
-            For next week, how do you want it? <span className="text-burgundy">*</span>
-          </p>
-          <RadioGroup
-            name="push_preference"
-            required
-            value={pushPref}
-            onChange={setPushPref}
-            colorMap={{
-              push_more: "border-burgundy/40 bg-burgundy/10 text-burgundy",
-              keep_same: "border-olive/40 bg-olive/10 text-olive",
-              ease_off: "border-terracotta/40 bg-terracotta/10 text-terracotta",
-            }}
-            options={[
-              { value: "push_more", label: "Push me harder" },
-              { value: "keep_same", label: "Keep it here" },
-              { value: "ease_off", label: "Ease off a bit" },
-            ]}
-          />
-        </div>
       </Section>
 
       <Section num="04" title="Fuel & Recovery">
@@ -658,10 +635,10 @@ export function CheckInHeader() {
           />
         </Link>
         <Link
-          href="/"
+          href="/portal/dashboard"
           className="font-sans text-[12px] font-medium uppercase tracking-[0.08em] text-text-muted transition-colors hover:text-terracotta"
         >
-          ← Back to site
+          ← Back to dashboard
         </Link>
       </Container>
     </header>

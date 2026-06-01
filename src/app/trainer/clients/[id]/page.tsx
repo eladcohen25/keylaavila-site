@@ -1,12 +1,13 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import TrainerLayout from "@/components/trainer/TrainerLayout";
 import AssignPanel from "@/components/trainer/AssignPanel";
 import NutritionEditor from "@/components/trainer/NutritionEditor";
+import Avatar from "@/components/portal/Avatar";
 import { getSupabaseBrowser } from "@/lib/supabase-browser";
 import {
   formatDuration,
@@ -147,14 +148,22 @@ function ClientDetail({ id }: { id: string }) {
         Clients
       </Link>
 
-      <div className="mb-6">
-        <h1 className="font-serif text-2xl font-light tracking-tight text-text">
-          {profile.full_name || "Unnamed client"}
-        </h1>
-        <div className="mt-1 flex flex-wrap gap-x-4 font-sans text-sm text-text-muted">
-          {profile.email && <span>{profile.email}</span>}
-          {profile.phone && <span>{profile.phone}</span>}
-          <span>{profile.onboarding_complete ? "Onboarded" : "Onboarding pending"}</span>
+      <div className="mb-6 flex items-center gap-4">
+        <AvatarUploader
+          clientId={id}
+          name={profile.full_name}
+          url={profile.avatar_url}
+          onChange={(newUrl) => setProfile((p) => (p ? { ...p, avatar_url: newUrl } : p))}
+        />
+        <div>
+          <h1 className="font-serif text-2xl font-light tracking-tight text-text">
+            {profile.full_name || "Unnamed client"}
+          </h1>
+          <div className="mt-1 flex flex-wrap gap-x-4 font-sans text-sm text-text-muted">
+            {profile.email && <span>{profile.email}</span>}
+            {profile.phone && <span>{profile.phone}</span>}
+            <span>{profile.onboarding_complete ? "Onboarded" : "Onboarding pending"}</span>
+          </div>
         </div>
       </div>
 
@@ -181,6 +190,116 @@ function ClientDetail({ id }: { id: string }) {
       {tab === "checkins" && <CheckIns checkins={checkins} />}
       {tab === "workouts" && <Workouts sessions={sessions} />}
     </>
+  );
+}
+
+function AvatarUploader({
+  clientId,
+  name,
+  url,
+  onChange,
+}: {
+  clientId: string;
+  name: string | null;
+  url: string | null;
+  onChange: (url: string | null) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleFile(file: File | null) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Please choose an image file.");
+      return;
+    }
+    setUploading(true);
+    setError("");
+    const supabase = getSupabaseBrowser();
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const path = `${clientId}/${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage
+      .from("avatars")
+      .upload(path, file, { upsert: true, contentType: file.type });
+    if (upErr) {
+      setError(upErr.message);
+      setUploading(false);
+      return;
+    }
+    const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
+    const publicUrl = pub.publicUrl;
+    const { error: updErr } = await supabase
+      .from("profiles")
+      .update({ avatar_url: publicUrl })
+      .eq("id", clientId);
+    if (updErr) {
+      setError(updErr.message);
+      setUploading(false);
+      return;
+    }
+    onChange(publicUrl);
+    setUploading(false);
+  }
+
+  async function removePhoto() {
+    setUploading(true);
+    setError("");
+    const supabase = getSupabaseBrowser();
+    const { error: updErr } = await supabase
+      .from("profiles")
+      .update({ avatar_url: null })
+      .eq("id", clientId);
+    if (updErr) setError(updErr.message);
+    else onChange(null);
+    setUploading(false);
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        disabled={uploading}
+        className="group relative rounded-full transition disabled:opacity-60"
+        title="Change profile picture"
+      >
+        <Avatar name={name} url={url} size={72} />
+        <span className="absolute inset-0 flex items-center justify-center rounded-full bg-text/40 text-white opacity-0 transition group-hover:opacity-100">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+            <circle cx="12" cy="13" r="4" />
+          </svg>
+        </span>
+      </button>
+      <div className="flex items-center gap-2 font-sans text-[11px]">
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="font-medium text-terracotta hover:underline disabled:opacity-60"
+        >
+          {uploading ? "Uploading…" : url ? "Change" : "Add photo"}
+        </button>
+        {url && !uploading && (
+          <button
+            type="button"
+            onClick={removePhoto}
+            className="text-text-muted hover:text-burgundy"
+          >
+            Remove
+          </button>
+        )}
+      </div>
+      {error && <p className="max-w-[120px] text-center font-sans text-[10px] text-burgundy">{error}</p>}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
+      />
+    </div>
   );
 }
 
@@ -336,7 +455,7 @@ function CheckIns({ checkins }: { checkins: CheckIn[] }) {
             <Mini label="Weight" value={c.weight ? `${c.weight} lbs` : "—"} />
             <Mini label="Sessions" value={String(c.sessions_with_keyla)} />
             <Mini label="Difficulty" value={c.session_difficulty?.replace(/_/g, " ")} />
-            <Mini label="Wants" value={c.push_preference?.replace(/_/g, " ")} />
+            <Mini label="Wants" value={c.push_preference ? c.push_preference.replace(/_/g, " ") : "—"} />
           </div>
           {(c.nutrition_notes || c.weekly_notes) && (
             <div className="mt-3 space-y-2">
