@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import TrainerLayout from "@/components/trainer/TrainerLayout";
 import { getSupabaseBrowser } from "@/lib/supabase-browser";
-import type { Exercise } from "@/lib/portal/types";
+import { type Exercise, parseDuration, formatRest } from "@/lib/portal/types";
 import { Card, Spinner, PortalButton, TextInput } from "@/components/portal/ui";
 
 interface Program {
@@ -34,6 +34,10 @@ interface ProgramDay {
   program_id: string;
   day_label: string;
   order_index: number;
+  warmup_text: string | null;
+  warmup_seconds: number | null;
+  cooldown_text: string | null;
+  cooldown_seconds: number | null;
   program_exercises: ProgramExercise[];
 }
 
@@ -205,10 +209,26 @@ function DayCard({
 }) {
   const [label, setLabel] = useState(day.day_label);
   const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const list = day.program_exercises;
 
   async function removeExercise(peId: string) {
     const supabase = getSupabaseBrowser();
     await supabase.from("program_exercises").delete().eq("id", peId);
+    onChanged();
+  }
+
+  async function move(idx: number, dir: -1 | 1) {
+    const target = idx + dir;
+    if (target < 0 || target >= list.length) return;
+    const a = list[idx];
+    const b = list[target];
+    const supabase = getSupabaseBrowser();
+    await Promise.all([
+      supabase.from("program_exercises").update({ order_index: b.order_index }).eq("id", a.id),
+      supabase.from("program_exercises").update({ order_index: a.order_index }).eq("id", b.id),
+    ]);
     onChanged();
   }
 
@@ -226,35 +246,83 @@ function DayCard({
         </button>
       </div>
 
-      {day.program_exercises.length > 0 && (
+      <WarmCoolEditor table="program_days" rowId={day.id} initial={day} />
+
+      {list.length > 0 && (
         <div className="mt-3 space-y-2">
-          {day.program_exercises.map((pe) => (
-            <div
-              key={pe.id}
-              className="flex items-center justify-between rounded-lg border border-border bg-bg px-3 py-2"
-            >
-              <div>
-                <p className="font-sans text-sm font-medium text-text">
-                  {pe.exercise?.name ?? "Exercise"}
-                </p>
-                <p className="font-sans text-xs text-text-muted">
-                  {pe.target_sets ?? "?"} × {pe.target_reps ?? "?"}
-                  {pe.use_percent && pe.percent_1rm != null ? ` · ${pe.percent_1rm}% 1RM` : ""}
-                  {pe.target_rpe ? ` · RPE ${pe.target_rpe}` : ""}
-                  {pe.rest_seconds != null ? ` · ${pe.rest_seconds}s rest` : ""}
-                  {pe.tempo ? ` · tempo ${pe.tempo}` : ""}
-                  {pe.each_side ? " · each side" : ""}
-                </p>
-                {pe.notes && <p className="font-sans text-xs italic text-text-muted">{pe.notes}</p>}
-              </div>
-              <button
-                onClick={() => removeExercise(pe.id)}
-                className="shrink-0 font-sans text-xs text-text-muted hover:text-burgundy"
+          {list.map((pe, idx) =>
+            editingId === pe.id ? (
+              <EditExerciseForm
+                key={pe.id}
+                pe={pe}
+                library={library}
+                onDone={() => {
+                  setEditingId(null);
+                  onChanged();
+                }}
+                onCancel={() => setEditingId(null)}
+              />
+            ) : (
+              <div
+                key={pe.id}
+                className="flex items-center justify-between gap-2 rounded-lg border border-border bg-bg px-3 py-2"
               >
-                Remove
-              </button>
-            </div>
-          ))}
+                <div className="flex shrink-0 flex-col">
+                  <button
+                    onClick={() => move(idx, -1)}
+                    disabled={idx === 0}
+                    aria-label="Move up"
+                    className="text-text-muted transition hover:text-terracotta disabled:opacity-30"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="18 15 12 9 6 15" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => move(idx, 1)}
+                    disabled={idx === list.length - 1}
+                    aria-label="Move down"
+                    className="text-text-muted transition hover:text-terracotta disabled:opacity-30"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-sans text-sm font-medium text-text">
+                    {pe.exercise?.name ?? "Exercise"}
+                  </p>
+                  <p className="font-sans text-xs text-text-muted">
+                    {pe.target_sets ?? "?"} × {pe.target_reps ?? "?"}
+                    {pe.use_percent && pe.percent_1rm != null ? ` · ${pe.percent_1rm}% 1RM` : ""}
+                    {pe.target_rpe ? ` · RPE ${pe.target_rpe}` : ""}
+                    {pe.rest_seconds != null ? ` · ${pe.rest_seconds}s rest` : ""}
+                    {pe.tempo ? ` · tempo ${pe.tempo}` : ""}
+                    {pe.each_side ? " · each side" : ""}
+                  </p>
+                  {pe.notes && <p className="font-sans text-xs italic text-text-muted">{pe.notes}</p>}
+                </div>
+                <div className="flex shrink-0 items-center gap-3">
+                  <button
+                    onClick={() => {
+                      setAdding(false);
+                      setEditingId(pe.id);
+                    }}
+                    className="font-sans text-xs font-medium text-terracotta hover:underline"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => removeExercise(pe.id)}
+                    className="font-sans text-xs text-text-muted hover:text-burgundy"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            )
+          )}
         </div>
       )}
 
@@ -262,7 +330,7 @@ function DayCard({
         <AddExerciseForm
           dayId={day.id}
           library={library}
-          nextOrder={day.program_exercises.length}
+          nextOrder={list.length}
           onDone={() => {
             setAdding(false);
             onChanged();
@@ -271,13 +339,188 @@ function DayCard({
         />
       ) : (
         <button
-          onClick={() => setAdding(true)}
+          onClick={() => {
+            setEditingId(null);
+            setAdding(true);
+          }}
           className="mt-3 w-full rounded-lg border border-dashed border-border py-2 font-sans text-sm font-medium text-text-muted transition hover:border-terracotta hover:text-terracotta"
         >
           + Add exercise
         </button>
       )}
     </Card>
+  );
+}
+
+/** Warm-up / cool-down freestyle text + timer editor.
+ *  Reused by the program builder (program_days) and the assign panel (assigned_workouts). */
+export function WarmCoolEditor({
+  table,
+  rowId,
+  initial,
+}: {
+  table: "program_days" | "assigned_workouts";
+  rowId: string;
+  initial: { warmup_text: string | null; warmup_seconds: number | null; cooldown_text: string | null; cooldown_seconds: number | null };
+}) {
+  const [warmupText, setWarmupText] = useState(initial.warmup_text ?? "");
+  const [warmupDur, setWarmupDur] = useState(initial.warmup_seconds != null ? formatRest(initial.warmup_seconds) : "");
+  const [cooldownText, setCooldownText] = useState(initial.cooldown_text ?? "");
+  const [cooldownDur, setCooldownDur] = useState(initial.cooldown_seconds != null ? formatRest(initial.cooldown_seconds) : "");
+
+  async function saveWarmup() {
+    const supabase = getSupabaseBrowser();
+    await supabase
+      .from(table)
+      .update({ warmup_text: warmupText.trim() || null, warmup_seconds: parseDuration(warmupDur) })
+      .eq("id", rowId);
+  }
+  async function saveCooldown() {
+    const supabase = getSupabaseBrowser();
+    await supabase
+      .from(table)
+      .update({ cooldown_text: cooldownText.trim() || null, cooldown_seconds: parseDuration(cooldownDur) })
+      .eq("id", rowId);
+  }
+
+  const fieldCls =
+    "w-full rounded-lg border border-border bg-white px-3 py-2 font-sans text-sm text-text outline-none focus:border-terracotta focus:ring-1 focus:ring-terracotta/30";
+
+  return (
+    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+      <FreestyleBlock
+        title="Warm-up (freestyle)"
+        text={warmupText}
+        setText={setWarmupText}
+        dur={warmupDur}
+        setDur={setWarmupDur}
+        onBlur={saveWarmup}
+        fieldCls={fieldCls}
+      />
+      <FreestyleBlock
+        title="Cool-down (freestyle)"
+        text={cooldownText}
+        setText={setCooldownText}
+        dur={cooldownDur}
+        setDur={setCooldownDur}
+        onBlur={saveCooldown}
+        fieldCls={fieldCls}
+      />
+    </div>
+  );
+}
+
+function FreestyleBlock({
+  title,
+  text,
+  setText,
+  dur,
+  setDur,
+  onBlur,
+  fieldCls,
+}: {
+  title: string;
+  text: string;
+  setText: (v: string) => void;
+  dur: string;
+  setDur: (v: string) => void;
+  onBlur: () => void;
+  fieldCls: string;
+}) {
+  return (
+    <div className="rounded-lg border border-dashed border-border bg-bg p-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="font-sans text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+          {title}
+        </span>
+        <input
+          className="w-20 rounded-md border border-border bg-white px-2 py-1 text-center font-sans text-xs text-text outline-none focus:border-terracotta"
+          placeholder="mm:ss"
+          value={dur}
+          onChange={(e) => setDur(e.target.value)}
+          onBlur={onBlur}
+          aria-label={`${title} timer`}
+        />
+      </div>
+      <textarea
+        className={`${fieldCls} resize-none`}
+        rows={2}
+        placeholder="e.g. 5 min bike, dynamic stretches, banded warm-up…"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={onBlur}
+      />
+    </div>
+  );
+}
+
+/** Edit an already-added program exercise (full prescription). */
+function EditExerciseForm({
+  pe,
+  library,
+  onDone,
+  onCancel,
+}: {
+  pe: ProgramExercise;
+  library: Exercise[];
+  onDone: () => void;
+  onCancel: () => void;
+}) {
+  const [exerciseId, setExerciseId] = useState(pe.exercise_id);
+  const [sets, setSets] = useState(pe.target_sets != null ? String(pe.target_sets) : "");
+  const [reps, setReps] = useState(pe.target_reps ?? "");
+  const [rpe, setRpe] = useState(pe.target_rpe ?? "");
+  const [rest, setRest] = useState(pe.rest_seconds != null ? String(pe.rest_seconds) : "");
+  const [notes, setNotes] = useState(pe.notes ?? "");
+  const [usePercent, setUsePercent] = useState(!!pe.use_percent);
+  const [percent, setPercent] = useState(pe.percent_1rm != null ? String(pe.percent_1rm) : "");
+  const [tempo, setTempo] = useState(pe.tempo ?? "");
+  const [eachSide, setEachSide] = useState(!!pe.each_side);
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    if (!exerciseId) return;
+    setSaving(true);
+    const supabase = getSupabaseBrowser();
+    await supabase
+      .from("program_exercises")
+      .update({
+        exercise_id: exerciseId,
+        target_sets: sets === "" ? null : Number(sets),
+        target_reps: reps.trim() || null,
+        target_rpe: rpe.trim() || null,
+        rest_seconds: rest === "" ? null : Number(rest),
+        notes: notes.trim() || null,
+        use_percent: usePercent,
+        percent_1rm: usePercent && percent !== "" ? Number(percent) : null,
+        tempo: tempo.trim() || null,
+        each_side: eachSide,
+      })
+      .eq("id", pe.id);
+    setSaving(false);
+    onDone();
+  }
+
+  return (
+    <ExercisePrescriptionForm
+      library={library}
+      exerciseId={exerciseId}
+      onPick={setExerciseId}
+      sets={sets} setSets={setSets}
+      reps={reps} setReps={setReps}
+      rpe={rpe} setRpe={setRpe}
+      rest={rest} setRest={setRest}
+      notes={notes} setNotes={setNotes}
+      usePercent={usePercent} setUsePercent={setUsePercent}
+      percent={percent} setPercent={setPercent}
+      tempo={tempo} setTempo={setTempo}
+      eachSide={eachSide} setEachSide={setEachSide}
+      saving={saving}
+      onCancel={onCancel}
+      onSave={save}
+      saveLabel="Save"
+      savingLabel="Saving…"
+    />
   );
 }
 
@@ -377,6 +620,8 @@ export function ExercisePrescriptionForm({
   saving,
   onCancel,
   onSave,
+  saveLabel = "Add",
+  savingLabel = "Adding…",
 }: {
   library: Exercise[];
   exerciseId: string;
@@ -393,6 +638,8 @@ export function ExercisePrescriptionForm({
   saving: boolean;
   onCancel: () => void;
   onSave: () => void;
+  saveLabel?: string;
+  savingLabel?: string;
 }) {
   const fieldCls =
     "w-full rounded-lg border border-border bg-white px-3 py-2 font-sans text-sm text-text outline-none focus:border-terracotta focus:ring-1 focus:ring-terracotta/30";
@@ -456,7 +703,7 @@ export function ExercisePrescriptionForm({
           Cancel
         </PortalButton>
         <PortalButton onClick={onSave} disabled={!exerciseId || saving} className="flex-1">
-          {saving ? "Adding…" : "Add"}
+          {saving ? savingLabel : saveLabel}
         </PortalButton>
       </div>
     </div>

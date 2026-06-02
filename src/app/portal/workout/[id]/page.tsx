@@ -62,6 +62,31 @@ function storageKey(id: string) {
   return `kworkout:${id}`;
 }
 
+interface SupersetInfo {
+  group: LoadedExercise[];
+  position: number;
+  isSuperset: boolean;
+}
+
+/** Group consecutive exercises sharing a superset_group, and locate `current`. */
+function supersetForIndex(exercises: LoadedExercise[], current: number): SupersetInfo {
+  const groups: LoadedExercise[][] = [];
+  for (const ex of exercises) {
+    const last = groups[groups.length - 1];
+    if (ex.superset_group && last && last[0].superset_group === ex.superset_group) {
+      last.push(ex);
+    } else {
+      groups.push([ex]);
+    }
+  }
+  const target = exercises[current];
+  for (const g of groups) {
+    const pos = g.findIndex((e) => e.id === target?.id);
+    if (pos >= 0) return { group: g, position: pos, isSuperset: g.length > 1 };
+  }
+  return { group: target ? [target] : [], position: 0, isSuperset: false };
+}
+
 /** The weight to show for a set: auto-calculated from %1RM unless overridden. */
 function effectiveWeight(s: SetState, usePercent: boolean, oneRepMax: number | null): string {
   if (s.weightEdited) return s.weight;
@@ -471,6 +496,9 @@ function WorkoutInner({ id }: { id: string }) {
   const ae = exercises[current];
   const exState = state[ae.id];
   const isLast = current === exercises.length - 1;
+  const superset = supersetForIndex(exercises, current);
+  const hasWarmup = !!(workout?.warmup_text || (workout?.warmup_seconds ?? 0) > 0);
+  const hasCooldown = !!(workout?.cooldown_text || (workout?.cooldown_seconds ?? 0) > 0);
 
   return (
     <div className="min-h-screen bg-bg pb-28">
@@ -529,6 +557,26 @@ function WorkoutInner({ id }: { id: string }) {
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
+        {current === 0 && hasWarmup && workout && (
+          <WarmCoolPanel
+            kind="warmup"
+            text={workout.warmup_text}
+            seconds={workout.warmup_seconds}
+          />
+        )}
+
+        {superset.isSuperset && (
+          <SupersetBanner
+            group={superset.group}
+            position={superset.position}
+            currentId={ae.id}
+            onJump={(exId) => {
+              const idx = exercises.findIndex((e) => e.id === exId);
+              if (idx >= 0) goTo(idx);
+            }}
+          />
+        )}
+
         <ExerciseCard
           key={ae.id}
           ae={ae}
@@ -542,6 +590,14 @@ function WorkoutInner({ id }: { id: string }) {
           onToggleDone={(idx) => toggleSetDone(ae.id, idx)}
           onPlayVideo={setPlayingVideo}
         />
+
+        {isLast && hasCooldown && workout && (
+          <WarmCoolPanel
+            kind="cooldown"
+            text={workout.cooldown_text}
+            seconds={workout.cooldown_seconds}
+          />
+        )}
 
         <ErrorBanner message={error} />
       </main>
@@ -579,6 +635,144 @@ function WorkoutInner({ id }: { id: string }) {
           onFinish={finishRest}
         />
       )}
+    </div>
+  );
+}
+
+// ─── Warm-up / Cool-down panel ─────────────────────────────────────────────
+
+function WarmCoolPanel({
+  kind,
+  text,
+  seconds,
+}: {
+  kind: "warmup" | "cooldown";
+  text: string | null;
+  seconds: number | null;
+}) {
+  const total = seconds && seconds > 0 ? seconds : 0;
+  const [remaining, setRemaining] = useState(total);
+  const [running, setRunning] = useState(false);
+
+  useEffect(() => {
+    if (!running) return;
+    const t = setInterval(() => {
+      setRemaining((r) => (r <= 1 ? 0 : r - 1));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [running]);
+
+  useEffect(() => {
+    if (remaining === 0) setRunning(false);
+  }, [remaining]);
+
+  const title = kind === "warmup" ? "Warm-up" : "Cool-down";
+
+  return (
+    <div className="mb-4 rounded-2xl border border-terracotta/30 bg-terracotta/[0.05] p-4">
+      <div className="flex items-center gap-2">
+        <span className="inline-flex items-center gap-1.5 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-terracotta">
+          {kind === "warmup" ? (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 2s4 4 4 8a4 4 0 0 1-8 0c0-4 4-8 4-8z" />
+            </svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 12h4l3 8 4-16 3 8h4" />
+            </svg>
+          )}
+          {title}
+        </span>
+      </div>
+
+      {text && (
+        <p className="mt-2 whitespace-pre-wrap font-sans text-sm leading-relaxed text-text">{text}</p>
+      )}
+
+      {total > 0 && (
+        <div className="mt-3 flex items-center gap-3">
+          <span className="font-serif text-3xl font-light tabular-nums text-text">
+            {formatRest(remaining)}
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                if (remaining === 0) setRemaining(total);
+                setRunning((r) => !r);
+              }}
+              className="rounded-full bg-terracotta px-4 py-1.5 font-sans text-xs font-medium text-white transition hover:bg-terracotta/90"
+            >
+              {running ? "Pause" : remaining === 0 ? "Restart" : remaining === total ? "Start" : "Resume"}
+            </button>
+            {(running || remaining !== total) && (
+              <button
+                onClick={() => {
+                  setRunning(false);
+                  setRemaining(total);
+                }}
+                className="rounded-full border border-border bg-white px-4 py-1.5 font-sans text-xs font-medium text-text-muted transition hover:text-text"
+              >
+                Reset
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Superset banner ───────────────────────────────────────────────────────
+
+function SupersetBanner({
+  group,
+  position,
+  currentId,
+  onJump,
+}: {
+  group: LoadedExercise[];
+  position: number;
+  currentId: string;
+  onJump: (exId: string) => void;
+}) {
+  return (
+    <div className="mb-4 rounded-2xl border border-terracotta/40 bg-terracotta/[0.05] p-4">
+      <div className="flex items-center gap-1.5 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-terracotta">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1" />
+          <path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1" />
+        </svg>
+        Superset · {position + 1} of {group.length}
+      </div>
+      <p className="mt-1 font-sans text-xs text-text-muted">
+        Do these back-to-back with no rest, then rest after the last move.
+      </p>
+      <div className="mt-2 flex flex-col gap-1.5">
+        {group.map((g, i) => {
+          const active = g.id === currentId;
+          return (
+            <button
+              key={g.id}
+              onClick={() => onJump(g.id)}
+              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left transition ${
+                active
+                  ? "border-terracotta bg-white"
+                  : "border-border bg-white/60 hover:border-terracotta/40"
+              }`}
+            >
+              <span className="inline-flex h-6 w-7 shrink-0 items-center justify-center rounded-md bg-terracotta/10 font-sans text-[11px] font-semibold text-terracotta">
+                {String.fromCharCode(65)}
+                {i + 1}
+              </span>
+              <span
+                className={`font-sans text-sm ${active ? "font-medium text-text" : "text-text-muted"}`}
+              >
+                {g.exercise?.name ?? "Exercise"}
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

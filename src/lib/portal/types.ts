@@ -79,6 +79,10 @@ export interface AssignedWorkout {
   status: WorkoutStatus;
   order_index: number;
   assigned_at: string;
+  warmup_text: string | null;
+  warmup_seconds: number | null;
+  cooldown_text: string | null;
+  cooldown_seconds: number | null;
 }
 
 export interface AssignedExercise {
@@ -95,6 +99,8 @@ export interface AssignedExercise {
   tempo: string | null;
   percent_1rm: number | null;
   each_side: boolean;
+  superset_group: string | null;
+  superset_order: number;
   exercise?: Exercise;
 }
 
@@ -194,6 +200,22 @@ export function formatRest(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+/** Parse "10", "10:30", or "1:05" into seconds. Returns null if blank/invalid. */
+export function parseDuration(str: string): number | null {
+  const t = str.trim();
+  if (!t) return null;
+  if (t.includes(":")) {
+    const [mRaw, sRaw] = t.split(":");
+    const m = Number(mRaw);
+    const s = Number(sRaw);
+    if (!Number.isFinite(m) || !Number.isFinite(s)) return null;
+    return Math.max(0, Math.round(m) * 60 + Math.round(s));
+  }
+  const m = Number(t);
+  if (!Number.isFinite(m)) return null;
+  return Math.max(0, Math.round(m * 60));
 }
 
 /** Build an embeddable URL for a YouTube/Vimeo link, or null if not embeddable. */

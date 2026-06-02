@@ -22,6 +22,10 @@ export async function assignProgram(
   for (const day of (days ?? []) as Array<{
     day_label: string;
     order_index: number;
+    warmup_text: string | null;
+    warmup_seconds: number | null;
+    cooldown_text: string | null;
+    cooldown_seconds: number | null;
     program_exercises: Array<{
       exercise_id: string;
       order_index: number;
@@ -45,6 +49,10 @@ export async function assignProgram(
         day_label: day.day_label,
         status: "assigned",
         order_index: day.order_index,
+        warmup_text: day.warmup_text ?? null,
+        warmup_seconds: day.warmup_seconds ?? null,
+        cooldown_text: day.cooldown_text ?? null,
+        cooldown_seconds: day.cooldown_seconds ?? null,
       })
       .select("id")
       .single();
@@ -93,6 +101,10 @@ export async function assignProgramFromDate(
   const dayList = (days ?? []) as Array<{
     day_label: string;
     order_index: number;
+    warmup_text: string | null;
+    warmup_seconds: number | null;
+    cooldown_text: string | null;
+    cooldown_seconds: number | null;
     program_exercises: Array<{
       exercise_id: string;
       order_index: number;
@@ -125,6 +137,10 @@ export async function assignProgramFromDate(
         day_label: day.day_label,
         status: "assigned",
         order_index: day.order_index,
+        warmup_text: day.warmup_text ?? null,
+        warmup_seconds: day.warmup_seconds ?? null,
+        cooldown_text: day.cooldown_text ?? null,
+        cooldown_seconds: day.cooldown_seconds ?? null,
       })
       .select("id")
       .single();
