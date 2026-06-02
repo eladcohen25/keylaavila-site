@@ -231,7 +231,7 @@ export default function AssignPanel({ clientId }: { clientId: string }) {
       </Card>
 
       {/* Assigned workouts this week */}
-      {loading ? (
+      {loading && workouts.length === 0 ? (
         <p className="font-sans text-sm text-text-muted">Loading…</p>
       ) : workouts.length === 0 ? (
         <Card className="text-center">
