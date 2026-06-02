@@ -44,6 +44,7 @@ function Builder({ id }: { id: string }) {
   const [library, setLibrary] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [newDayLabel, setNewDayLabel] = useState("");
+  const [programName, setProgramName] = useState("");
 
   const load = useCallback(async () => {
     const supabase = getSupabaseBrowser();
@@ -62,6 +63,7 @@ function Builder({ id }: { id: string }) {
       return;
     }
     setProgram(prog as Program);
+    setProgramName((prog as Program).name);
     const sortedDays = ((dayData as ProgramDay[]) ?? []).map((d) => ({
       ...d,
       program_exercises: [...(d.program_exercises ?? [])].sort(
@@ -99,6 +101,22 @@ function Builder({ id }: { id: string }) {
     await supabase.from("program_days").update({ day_label: label }).eq("id", dayId);
   }
 
+  async function renameProgram() {
+    if (!program) return;
+    const trimmed = programName.trim();
+    if (!trimmed || trimmed === program.name) {
+      setProgramName(program.name);
+      return;
+    }
+    const supabase = getSupabaseBrowser();
+    const { error } = await supabase
+      .from("programs")
+      .update({ name: trimmed })
+      .eq("id", id);
+    if (!error) setProgram({ ...program, name: trimmed });
+    else setProgramName(program.name);
+  }
+
   if (loading) {
     return <Spinner />;
   }
@@ -117,9 +135,20 @@ function Builder({ id }: { id: string }) {
       </Link>
 
       <div className="mb-6">
-        <h1 className="font-serif text-2xl font-light tracking-tight text-text">{program.name}</h1>
+        <label className="mb-1.5 block font-sans text-xs font-medium uppercase tracking-wider text-text-muted">
+          Program name
+        </label>
+        <input
+          value={programName}
+          onChange={(e) => setProgramName(e.target.value)}
+          onBlur={renameProgram}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.currentTarget.blur();
+          }}
+          className="w-full max-w-xl rounded-lg border border-border bg-white px-3 py-2 font-serif text-2xl font-light tracking-tight text-text outline-none transition focus:border-terracotta focus:ring-1 focus:ring-terracotta/30"
+        />
         {program.description && (
-          <p className="mt-1 font-sans text-sm text-text-muted">{program.description}</p>
+          <p className="mt-2 font-sans text-sm text-text-muted">{program.description}</p>
         )}
       </div>
 
