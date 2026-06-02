@@ -163,6 +163,9 @@ function ClientDetail({ id }: { id: string }) {
             {profile.email && <span>{profile.email}</span>}
             {profile.phone && <span>{profile.phone}</span>}
             <span>{profile.onboarding_complete ? "Onboarded" : "Onboarding pending"}</span>
+            <Link href={`/trainer/payments/${id}`} className="font-medium text-terracotta hover:underline">
+              Billing →
+            </Link>
           </div>
         </div>
       </div>
