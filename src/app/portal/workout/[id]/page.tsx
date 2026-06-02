@@ -117,7 +117,13 @@ function WorkoutInner({ id }: { id: string }) {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
   const [playingVideo, setPlayingVideo] = useState<string | null>(null);
-  const [rest, setRest] = useState<{ exId: string; setIdx: number; restSeconds: number; name: string } | null>(null);
+  const [rest, setRest] = useState<{
+    exId: string;
+    setIdx: number;
+    restSeconds: number;
+    name: string;
+    nextStepIndex: number | null;
+  } | null>(null);
   const hydrated = useRef(false);
 
   // ─── Load workout + exercises + maxes + last-time, restore local backup ────
@@ -314,36 +320,6 @@ function WorkoutInner({ id }: { id: string }) {
     });
   }, []);
 
-  // Toggle a set's done state; when newly completed, launch the rest timer.
-  const toggleSetDone = useCallback(
-    (exId: string, setIdx: number) => {
-      const ex = state[exId];
-      if (!ex) return;
-      const willBeDone = !ex.sets[setIdx].done;
-      updateSet(exId, setIdx, { done: willBeDone });
-      if (willBeDone) {
-        const aex = exercises.find((e) => e.id === exId);
-        setRest({
-          exId,
-          setIdx,
-          restSeconds: aex?.rest_seconds ?? 60,
-          name: aex?.exercise?.name ?? "Rest",
-        });
-      }
-    },
-    [state, exercises, updateSet]
-  );
-
-  const finishRest = useCallback(
-    (restTaken: number) => {
-      setRest((r) => {
-        if (r) updateSet(r.exId, r.setIdx, { rest_taken_seconds: restTaken });
-        return null;
-      });
-    },
-    [updateSet]
-  );
-
   // ─── Steps: warm-up (first) · exercises · cool-down (last) ───────────────
   const hasWarmup = !!(workout?.warmup_text || (workout?.warmup_seconds ?? 0) > 0);
   const hasCooldown = !!(workout?.cooldown_text || (workout?.cooldown_seconds ?? 0) > 0);
@@ -360,6 +336,63 @@ function WorkoutInner({ id }: { id: string }) {
   const goTo = useCallback(
     (i: number) => setCurrent((c) => Math.min(steps.length - 1, Math.max(0, i ?? c))),
     [steps.length]
+  );
+
+  // Toggle a set's done state; when newly completed, launch the rest timer.
+  // If this exercise belongs to a superset, queue an auto-jump to the next
+  // member that still has work left, so the client flows
+  // A1 → (rest) → A2 → (rest) → A1 … until every move in the group is done.
+  const toggleSetDone = useCallback(
+    (exId: string, setIdx: number) => {
+      const ex = state[exId];
+      if (!ex) return;
+      const willBeDone = !ex.sets[setIdx].done;
+      updateSet(exId, setIdx, { done: willBeDone });
+      if (willBeDone) {
+        const aex = exercises.find((e) => e.id === exId);
+        let nextStepIndex: number | null = null;
+        const exIndex = exercises.findIndex((e) => e.id === exId);
+        const ss = exIndex >= 0 ? supersetForIndex(exercises, exIndex) : null;
+        if (ss?.isSuperset) {
+          const len = ss.group.length;
+          for (let k = 1; k < len; k++) {
+            const member = ss.group[(ss.position + k) % len];
+            const ms = state[member.id];
+            const hasIncomplete = ms ? ms.sets.some((s) => !s.done) : true;
+            if (hasIncomplete) {
+              const si = steps.findIndex(
+                (s) => s.kind === "exercise" && s.ae.id === member.id
+              );
+              if (si >= 0) {
+                nextStepIndex = si;
+                break;
+              }
+            }
+          }
+        }
+        setRest({
+          exId,
+          setIdx,
+          restSeconds: aex?.rest_seconds ?? 60,
+          name: aex?.exercise?.name ?? "Rest",
+          nextStepIndex,
+        });
+      }
+    },
+    [state, exercises, updateSet, steps]
+  );
+
+  const finishRest = useCallback(
+    (restTaken: number) => {
+      setRest((r) => {
+        if (r) {
+          updateSet(r.exId, r.setIdx, { rest_taken_seconds: restTaken });
+          if (r.nextStepIndex != null) goTo(r.nextStepIndex);
+        }
+        return null;
+      });
+    },
+    [updateSet, goTo]
   );
   function onTouchStart(e: React.TouchEvent) {
     touchX.current = e.touches[0].clientX;
