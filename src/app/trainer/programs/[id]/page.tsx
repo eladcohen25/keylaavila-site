@@ -210,6 +210,8 @@ function DayCard({
   const [label, setLabel] = useState(day.day_label);
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
 
   const list = day.program_exercises;
 
@@ -219,18 +221,32 @@ function DayCard({
     onChanged();
   }
 
-  async function move(idx: number, dir: -1 | 1) {
-    const target = idx + dir;
-    if (target < 0 || target >= list.length) return;
-    const a = list[idx];
-    const b = list[target];
+  async function persistOrder(next: ProgramExercise[]) {
     const supabase = getSupabaseBrowser();
-    await Promise.all([
-      supabase.from("program_exercises").update({ order_index: b.order_index }).eq("id", a.id),
-      supabase.from("program_exercises").update({ order_index: a.order_index }).eq("id", b.id),
-    ]);
+    await Promise.all(
+      next.map(
+        (pe, i) =>
+          supabase
+            .from("program_exercises")
+            .update({ order_index: i })
+            .eq("id", pe.id) as unknown as Promise<unknown>
+      )
+    );
     onChanged();
   }
+
+  function handleDrop(targetIdx: number) {
+    const from = dragIndex;
+    setDragIndex(null);
+    setOverIndex(null);
+    if (from === null || from === targetIdx) return;
+    const next = [...list];
+    const [moved] = next.splice(from, 1);
+    next.splice(targetIdx, 0, moved);
+    persistOrder(next);
+  }
+
+  const canDrag = editingId === null && list.length > 1;
 
   return (
     <Card>
@@ -265,30 +281,41 @@ function DayCard({
             ) : (
               <div
                 key={pe.id}
-                className="flex items-center justify-between gap-2 rounded-lg border border-border bg-bg px-3 py-2"
+                draggable={canDrag}
+                onDragStart={() => setDragIndex(idx)}
+                onDragOver={(e) => {
+                  if (dragIndex === null) return;
+                  e.preventDefault();
+                  setOverIndex(idx);
+                }}
+                onDrop={() => handleDrop(idx)}
+                onDragEnd={() => {
+                  setDragIndex(null);
+                  setOverIndex(null);
+                }}
+                className={`flex items-center justify-between gap-2 rounded-lg border border-border bg-bg px-3 py-2 transition ${
+                  dragIndex === idx ? "opacity-40" : ""
+                } ${
+                  overIndex === idx && dragIndex !== null && dragIndex !== idx
+                    ? "ring-2 ring-terracotta/50"
+                    : ""
+                }`}
               >
-                <div className="flex shrink-0 flex-col">
-                  <button
-                    onClick={() => move(idx, -1)}
-                    disabled={idx === 0}
-                    aria-label="Move up"
-                    className="text-text-muted transition hover:text-terracotta disabled:opacity-30"
+                {canDrag && (
+                  <div
+                    className="flex w-5 shrink-0 cursor-grab items-center justify-center text-text-muted/60 transition hover:text-terracotta active:cursor-grabbing"
+                    aria-hidden
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="18 15 12 9 6 15" />
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <circle cx="9" cy="6" r="1.5" />
+                      <circle cx="15" cy="6" r="1.5" />
+                      <circle cx="9" cy="12" r="1.5" />
+                      <circle cx="15" cy="12" r="1.5" />
+                      <circle cx="9" cy="18" r="1.5" />
+                      <circle cx="15" cy="18" r="1.5" />
                     </svg>
-                  </button>
-                  <button
-                    onClick={() => move(idx, 1)}
-                    disabled={idx === list.length - 1}
-                    aria-label="Move down"
-                    className="text-text-muted transition hover:text-terracotta disabled:opacity-30"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </button>
-                </div>
+                  </div>
+                )}
                 <div className="min-w-0 flex-1">
                   <p className="font-sans text-sm font-medium text-text">
                     {pe.exercise?.name ?? "Exercise"}
@@ -367,6 +394,8 @@ export function WarmCoolEditor({
   const [warmupDur, setWarmupDur] = useState(initial.warmup_seconds != null ? formatRest(initial.warmup_seconds) : "");
   const [cooldownText, setCooldownText] = useState(initial.cooldown_text ?? "");
   const [cooldownDur, setCooldownDur] = useState(initial.cooldown_seconds != null ? formatRest(initial.cooldown_seconds) : "");
+  const [warmupOn, setWarmupOn] = useState(!!(initial.warmup_text || initial.warmup_seconds));
+  const [cooldownOn, setCooldownOn] = useState(!!(initial.cooldown_text || initial.cooldown_seconds));
 
   async function saveWarmup() {
     const supabase = getSupabaseBrowser();
@@ -382,31 +411,66 @@ export function WarmCoolEditor({
       .update({ cooldown_text: cooldownText.trim() || null, cooldown_seconds: parseDuration(cooldownDur) })
       .eq("id", rowId);
   }
+  async function removeWarmup() {
+    setWarmupText("");
+    setWarmupDur("");
+    setWarmupOn(false);
+    const supabase = getSupabaseBrowser();
+    await supabase.from(table).update({ warmup_text: null, warmup_seconds: null }).eq("id", rowId);
+  }
+  async function removeCooldown() {
+    setCooldownText("");
+    setCooldownDur("");
+    setCooldownOn(false);
+    const supabase = getSupabaseBrowser();
+    await supabase.from(table).update({ cooldown_text: null, cooldown_seconds: null }).eq("id", rowId);
+  }
 
   const fieldCls =
     "w-full rounded-lg border border-border bg-white px-3 py-2 font-sans text-sm text-text outline-none focus:border-terracotta focus:ring-1 focus:ring-terracotta/30";
 
   return (
     <div className="mt-3 grid gap-3 sm:grid-cols-2">
-      <FreestyleBlock
-        title="Warm-up (freestyle)"
-        text={warmupText}
-        setText={setWarmupText}
-        dur={warmupDur}
-        setDur={setWarmupDur}
-        onBlur={saveWarmup}
-        fieldCls={fieldCls}
-      />
-      <FreestyleBlock
-        title="Cool-down (freestyle)"
-        text={cooldownText}
-        setText={setCooldownText}
-        dur={cooldownDur}
-        setDur={setCooldownDur}
-        onBlur={saveCooldown}
-        fieldCls={fieldCls}
-      />
+      {warmupOn ? (
+        <FreestyleBlock
+          title="Warm-up (freestyle)"
+          text={warmupText}
+          setText={setWarmupText}
+          dur={warmupDur}
+          setDur={setWarmupDur}
+          onBlur={saveWarmup}
+          onRemove={removeWarmup}
+          fieldCls={fieldCls}
+        />
+      ) : (
+        <AddSectionButton label="+ Add warm-up" onClick={() => setWarmupOn(true)} />
+      )}
+      {cooldownOn ? (
+        <FreestyleBlock
+          title="Cool-down (freestyle)"
+          text={cooldownText}
+          setText={setCooldownText}
+          dur={cooldownDur}
+          setDur={setCooldownDur}
+          onBlur={saveCooldown}
+          onRemove={removeCooldown}
+          fieldCls={fieldCls}
+        />
+      ) : (
+        <AddSectionButton label="+ Add cool-down" onClick={() => setCooldownOn(true)} />
+      )}
     </div>
+  );
+}
+
+function AddSectionButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex min-h-[88px] w-full items-center justify-center rounded-lg border border-dashed border-border bg-bg font-sans text-sm font-medium text-text-muted transition hover:border-terracotta hover:text-terracotta"
+    >
+      {label}
+    </button>
   );
 }
 
@@ -417,6 +481,7 @@ function FreestyleBlock({
   dur,
   setDur,
   onBlur,
+  onRemove,
   fieldCls,
 }: {
   title: string;
@@ -425,6 +490,7 @@ function FreestyleBlock({
   dur: string;
   setDur: (v: string) => void;
   onBlur: () => void;
+  onRemove?: () => void;
   fieldCls: string;
 }) {
   return (
@@ -433,14 +499,29 @@ function FreestyleBlock({
         <span className="font-sans text-[11px] font-semibold uppercase tracking-wider text-text-muted">
           {title}
         </span>
-        <input
-          className="w-20 rounded-md border border-border bg-white px-2 py-1 text-center font-sans text-xs text-text outline-none focus:border-terracotta"
-          placeholder="mm:ss"
-          value={dur}
-          onChange={(e) => setDur(e.target.value)}
-          onBlur={onBlur}
-          aria-label={`${title} timer`}
-        />
+        <div className="flex items-center gap-2">
+          <input
+            className="w-20 rounded-md border border-border bg-white px-2 py-1 text-center font-sans text-xs text-text outline-none focus:border-terracotta"
+            placeholder="mm:ss"
+            value={dur}
+            onChange={(e) => setDur(e.target.value)}
+            onBlur={onBlur}
+            aria-label={`${title} timer`}
+          />
+          {onRemove && (
+            <button
+              type="button"
+              onClick={onRemove}
+              aria-label={`Remove ${title}`}
+              className="flex h-7 w-7 items-center justify-center rounded-md text-text-muted transition hover:bg-blush hover:text-burgundy"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
       <textarea
         className={`${fieldCls} resize-none`}

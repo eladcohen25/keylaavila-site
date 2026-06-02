@@ -68,6 +68,11 @@ interface SupersetInfo {
   isSuperset: boolean;
 }
 
+type Step =
+  | { kind: "warmup" }
+  | { kind: "cooldown" }
+  | { kind: "exercise"; ae: LoadedExercise };
+
 /** Group consecutive exercises sharing a superset_group, and locate `current`. */
 function supersetForIndex(exercises: LoadedExercise[], current: number): SupersetInfo {
   const groups: LoadedExercise[][] = [];
@@ -339,11 +344,22 @@ function WorkoutInner({ id }: { id: string }) {
     [updateSet]
   );
 
+  // ─── Steps: warm-up (first) · exercises · cool-down (last) ───────────────
+  const hasWarmup = !!(workout?.warmup_text || (workout?.warmup_seconds ?? 0) > 0);
+  const hasCooldown = !!(workout?.cooldown_text || (workout?.cooldown_seconds ?? 0) > 0);
+  const steps = useMemo<Step[]>(() => {
+    const s: Step[] = [];
+    if (hasWarmup) s.push({ kind: "warmup" });
+    for (const ae of exercises) s.push({ kind: "exercise", ae });
+    if (hasCooldown) s.push({ kind: "cooldown" });
+    return s;
+  }, [exercises, hasWarmup, hasCooldown]);
+
   // ─── Swipe navigation ────────────────────────────────────────────────────
   const touchX = useRef<number | null>(null);
   const goTo = useCallback(
-    (i: number) => setCurrent((c) => Math.min(exercises.length - 1, Math.max(0, i ?? c))),
-    [exercises.length]
+    (i: number) => setCurrent((c) => Math.min(steps.length - 1, Math.max(0, i ?? c))),
+    [steps.length]
   );
   function onTouchStart(e: React.TouchEvent) {
     touchX.current = e.touches[0].clientX;
@@ -493,12 +509,12 @@ function WorkoutInner({ id }: { id: string }) {
     );
   }
 
-  const ae = exercises[current];
-  const exState = state[ae.id];
-  const isLast = current === exercises.length - 1;
-  const superset = supersetForIndex(exercises, current);
-  const hasWarmup = !!(workout?.warmup_text || (workout?.warmup_seconds ?? 0) > 0);
-  const hasCooldown = !!(workout?.cooldown_text || (workout?.cooldown_seconds ?? 0) > 0);
+  const stepIndex = Math.min(current, steps.length - 1);
+  const step = steps[stepIndex];
+  const isLast = stepIndex === steps.length - 1;
+  const exIndex =
+    step?.kind === "exercise" ? exercises.findIndex((e) => e.id === step.ae.id) : -1;
+  const superset = exIndex >= 0 ? supersetForIndex(exercises, exIndex) : null;
 
   return (
     <div className="min-h-screen bg-bg pb-28">
@@ -532,15 +548,28 @@ function WorkoutInner({ id }: { id: string }) {
         </div>
         {/* progress dots */}
         <div className="flex items-center justify-center gap-1.5 px-4 pb-3">
-          {exercises.map((ex, i) => {
-            const allDone = state[ex.id]?.sets.every((s) => s.done);
+          {steps.map((s, i) => {
+            const active = i === stepIndex;
+            if (s.kind !== "exercise") {
+              return (
+                <button
+                  key={s.kind}
+                  onClick={() => goTo(i)}
+                  aria-label={s.kind === "warmup" ? "Go to warm-up" : "Go to cool-down"}
+                  className={`h-2 rounded-full transition-all ${
+                    active ? "w-5 bg-terracotta" : "w-2 bg-white/40"
+                  }`}
+                />
+              );
+            }
+            const allDone = state[s.ae.id]?.sets.every((x) => x.done);
             return (
               <button
-                key={ex.id}
+                key={s.ae.id}
                 onClick={() => goTo(i)}
-                aria-label={`Go to exercise ${i + 1}`}
+                aria-label={`Go to exercise`}
                 className={`h-2 rounded-full transition-all ${
-                  i === current
+                  active
                     ? "w-5 bg-terracotta"
                     : allDone
                       ? "w-2 bg-terracotta/60"
@@ -557,46 +586,42 @@ function WorkoutInner({ id }: { id: string }) {
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
-        {current === 0 && hasWarmup && workout && (
-          <WarmCoolPanel
-            kind="warmup"
-            text={workout.warmup_text}
-            seconds={workout.warmup_seconds}
-          />
+        {step?.kind === "warmup" && workout && (
+          <WarmCoolPanel kind="warmup" text={workout.warmup_text} seconds={workout.warmup_seconds} />
         )}
 
-        {superset.isSuperset && (
-          <SupersetBanner
-            group={superset.group}
-            position={superset.position}
-            currentId={ae.id}
-            onJump={(exId) => {
-              const idx = exercises.findIndex((e) => e.id === exId);
-              if (idx >= 0) goTo(idx);
-            }}
-          />
+        {step?.kind === "cooldown" && workout && (
+          <WarmCoolPanel kind="cooldown" text={workout.cooldown_text} seconds={workout.cooldown_seconds} />
         )}
 
-        <ExerciseCard
-          key={ae.id}
-          ae={ae}
-          state={exState}
-          lastTime={lastTime[ae.id]}
-          onUpdateSet={(idx, patch) => updateSet(ae.id, idx, patch)}
-          onPatch={(patch) => patchExercise(ae.id, patch)}
-          onMarkAll={() => markAll(ae.id)}
-          onAddSet={() => addSet(ae.id)}
-          onRemoveSet={(idx) => removeSet(ae.id, idx)}
-          onToggleDone={(idx) => toggleSetDone(ae.id, idx)}
-          onPlayVideo={setPlayingVideo}
-        />
+        {step?.kind === "exercise" && (
+          <>
+            {superset?.isSuperset && (
+              <SupersetBanner
+                group={superset.group}
+                position={superset.position}
+                currentId={step.ae.id}
+                onJump={(exId) => {
+                  const idx = steps.findIndex((s) => s.kind === "exercise" && s.ae.id === exId);
+                  if (idx >= 0) goTo(idx);
+                }}
+              />
+            )}
 
-        {isLast && hasCooldown && workout && (
-          <WarmCoolPanel
-            kind="cooldown"
-            text={workout.cooldown_text}
-            seconds={workout.cooldown_seconds}
-          />
+            <ExerciseCard
+              key={step.ae.id}
+              ae={step.ae}
+              state={state[step.ae.id]}
+              lastTime={lastTime[step.ae.id]}
+              onUpdateSet={(idx, patch) => updateSet(step.ae.id, idx, patch)}
+              onPatch={(patch) => patchExercise(step.ae.id, patch)}
+              onMarkAll={() => markAll(step.ae.id)}
+              onAddSet={() => addSet(step.ae.id)}
+              onRemoveSet={(idx) => removeSet(step.ae.id, idx)}
+              onToggleDone={(idx) => toggleSetDone(step.ae.id, idx)}
+              onPlayVideo={setPlayingVideo}
+            />
+          </>
         )}
 
         <ErrorBanner message={error} />
@@ -667,31 +692,38 @@ function WarmCoolPanel({
   }, [remaining]);
 
   const title = kind === "warmup" ? "Warm-up" : "Cool-down";
+  const subtitle =
+    kind === "warmup"
+      ? "Prime your body before the working sets."
+      : "Ease down and recover after your session.";
 
   return (
-    <div className="mb-4 rounded-2xl border border-terracotta/30 bg-terracotta/[0.05] p-4">
-      <div className="flex items-center gap-2">
-        <span className="inline-flex items-center gap-1.5 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-terracotta">
-          {kind === "warmup" ? (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 2s4 4 4 8a4 4 0 0 1-8 0c0-4 4-8 4-8z" />
-            </svg>
-          ) : (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M3 12h4l3 8 4-16 3 8h4" />
-            </svg>
-          )}
-          {title}
-        </span>
+    <div className="rounded-2xl border border-border bg-white p-6 shadow-sm">
+      <div className="flex items-center gap-2 text-terracotta">
+        {kind === "warmup" ? (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 2s4 4 4 8a4 4 0 0 1-8 0c0-4 4-8 4-8z" />
+          </svg>
+        ) : (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M3 12h4l3 8 4-16 3 8h4" />
+          </svg>
+        )}
+        <span className="font-sans text-[11px] font-semibold uppercase tracking-[0.16em]">{title}</span>
       </div>
 
+      <h2 className="mt-2 font-serif text-2xl font-light text-text">{title}</h2>
+      <p className="mt-0.5 font-sans text-sm text-text-muted">{subtitle}</p>
+
       {text && (
-        <p className="mt-2 whitespace-pre-wrap font-sans text-sm leading-relaxed text-text">{text}</p>
+        <p className="mt-4 whitespace-pre-wrap rounded-xl bg-bg p-4 font-sans text-sm leading-relaxed text-text">
+          {text}
+        </p>
       )}
 
       {total > 0 && (
-        <div className="mt-3 flex items-center gap-3">
-          <span className="font-serif text-3xl font-light tabular-nums text-text">
+        <div className="mt-5 flex flex-col items-center gap-3 rounded-xl border border-terracotta/20 bg-terracotta/[0.04] py-6">
+          <span className="font-serif text-5xl font-light tabular-nums text-text">
             {formatRest(remaining)}
           </span>
           <div className="flex gap-2">
@@ -700,7 +732,7 @@ function WarmCoolPanel({
                 if (remaining === 0) setRemaining(total);
                 setRunning((r) => !r);
               }}
-              className="rounded-full bg-terracotta px-4 py-1.5 font-sans text-xs font-medium text-white transition hover:bg-terracotta/90"
+              className="rounded-full bg-terracotta px-6 py-2 font-sans text-sm font-medium text-white transition hover:bg-terracotta/90"
             >
               {running ? "Pause" : remaining === 0 ? "Restart" : remaining === total ? "Start" : "Resume"}
             </button>
@@ -710,7 +742,7 @@ function WarmCoolPanel({
                   setRunning(false);
                   setRemaining(total);
                 }}
-                className="rounded-full border border-border bg-white px-4 py-1.5 font-sans text-xs font-medium text-text-muted transition hover:text-text"
+                className="rounded-full border border-border bg-white px-6 py-2 font-sans text-sm font-medium text-text-muted transition hover:text-text"
               >
                 Reset
               </button>

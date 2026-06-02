@@ -361,6 +361,8 @@ function WorkoutExercises({
   onChanged: () => void;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
   const list = workout.assigned_exercises;
   const groups = buildGroups(list);
 
@@ -381,28 +383,39 @@ function WorkoutExercises({
     onChanged();
   }
 
-  async function moveGroup(gi: number, dir: -1 | 1) {
-    const tgt = gi + dir;
-    if (tgt < 0 || tgt >= groups.length) return;
+  function handleDrop(targetGi: number) {
+    const from = dragIndex;
+    setDragIndex(null);
+    setOverIndex(null);
+    if (from === null || from === targetGi) return;
     const next = [...groups];
-    [next[gi], next[tgt]] = [next[tgt], next[gi]];
-    await persistOrder(next);
+    const [moved] = next.splice(from, 1);
+    next.splice(targetGi, 0, moved);
+    persistOrder(next);
   }
 
-  async function linkWithNext(gi: number) {
-    // Link this singleton with the next singleton into a superset pair.
-    const a = groups[gi]?.[0];
-    const b = groups[gi + 1]?.[0];
+  /** Merge groups gi and gi+1 into a single superset (handles singles & supersets). */
+  async function mergeAt(gi: number) {
+    const a = groups[gi];
+    const b = groups[gi + 1];
     if (!a || !b) return;
     const supabase = getSupabaseBrowser();
+    const existing = a[0].superset_group || b[0].superset_group;
     const group =
-      typeof crypto !== "undefined" && crypto.randomUUID
+      existing ||
+      (typeof crypto !== "undefined" && crypto.randomUUID
         ? crypto.randomUUID()
-        : `${a.id}-${b.id}`;
-    await Promise.all([
-      supabase.from("assigned_exercises").update({ superset_group: group, superset_order: 0 }).eq("id", a.id),
-      supabase.from("assigned_exercises").update({ superset_group: group, superset_order: 1 }).eq("id", b.id),
-    ]);
+        : `${a[0].id}-${b[0].id}`);
+    const members = [...a, ...b];
+    await Promise.all(
+      members.map(
+        (ae, i) =>
+          supabase
+            .from("assigned_exercises")
+            .update({ superset_group: group, superset_order: i })
+            .eq("id", ae.id) as unknown as Promise<unknown>
+      )
+    );
     onChanged();
   }
 
@@ -421,29 +434,20 @@ function WorkoutExercises({
     onChanged();
   }
 
-  function MoveArrows({ gi }: { gi: number }) {
+  function DragHandle() {
     return (
-      <div className="flex shrink-0 flex-col">
-        <button
-          onClick={() => moveGroup(gi, -1)}
-          disabled={gi === 0}
-          aria-label="Move up"
-          className="text-text-muted transition hover:text-terracotta disabled:opacity-30"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="18 15 12 9 6 15" />
-          </svg>
-        </button>
-        <button
-          onClick={() => moveGroup(gi, 1)}
-          disabled={gi === groups.length - 1}
-          aria-label="Move down"
-          className="text-text-muted transition hover:text-terracotta disabled:opacity-30"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </button>
+      <div
+        className="flex w-5 shrink-0 cursor-grab items-center justify-center text-text-muted/60 transition hover:text-terracotta active:cursor-grabbing"
+        aria-hidden
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="9" cy="6" r="1.5" />
+          <circle cx="15" cy="6" r="1.5" />
+          <circle cx="9" cy="12" r="1.5" />
+          <circle cx="15" cy="12" r="1.5" />
+          <circle cx="9" cy="18" r="1.5" />
+          <circle cx="15" cy="18" r="1.5" />
+        </svg>
       </div>
     );
   }
@@ -487,76 +491,102 @@ function WorkoutExercises({
     );
   }
 
+  const canDrag = editingId === null && groups.length > 1;
+
   return (
     <>
       {groups.length > 0 && (
-        <div className="mt-3 space-y-2">
+        <div className="mt-3">
           {groups.map((g, gi) => {
             const isSuperset = g.length > 1;
-            const nextIsSingle = groups[gi + 1]?.length === 1;
-            const thisIsSingle = g.length === 1;
+            const isDragging = dragIndex === gi;
+            const isOver = overIndex === gi && dragIndex !== null && dragIndex !== gi;
             return (
-              <div key={g[0].id} className="flex items-stretch gap-2">
-                <MoveArrows gi={gi} />
-                <div className="flex-1">
-                  {isSuperset ? (
-                    <div className="rounded-lg border border-terracotta/40 bg-terracotta/[0.04] p-2">
-                      <div className="mb-1 flex items-center justify-between px-1">
-                        <span className="inline-flex items-center gap-1 font-sans text-[10px] font-semibold uppercase tracking-wider text-terracotta">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1" />
-                            <path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1" />
-                          </svg>
-                          Superset
-                        </span>
-                        <button
-                          onClick={() => unlink(g[0].superset_group!)}
-                          className="font-sans text-[11px] text-text-muted hover:text-burgundy"
-                        >
-                          Unlink
-                        </button>
-                      </div>
-                      <div className="space-y-1.5">
-                        {g.map((ae, i) => (
-                          <div key={ae.id} className="rounded-md border border-border bg-white px-3 py-2">
-                            <div className="mb-0.5 font-sans text-[10px] font-semibold uppercase tracking-wider text-terracotta/70">
-                              {i === 0 ? "A1" : "A2"}
+              <div key={g[0].id}>
+                <div
+                  draggable={canDrag}
+                  onDragStart={() => setDragIndex(gi)}
+                  onDragOver={(e) => {
+                    if (dragIndex === null) return;
+                    e.preventDefault();
+                    setOverIndex(gi);
+                  }}
+                  onDrop={() => handleDrop(gi)}
+                  onDragEnd={() => {
+                    setDragIndex(null);
+                    setOverIndex(null);
+                  }}
+                  className={`flex items-stretch gap-1.5 rounded-lg transition ${
+                    isDragging ? "opacity-40" : ""
+                  } ${isOver ? "ring-2 ring-terracotta/50" : ""}`}
+                >
+                  {canDrag && <DragHandle />}
+                  <div className="flex-1">
+                    {isSuperset ? (
+                      <div className="rounded-lg border border-terracotta/40 bg-terracotta/[0.04] p-2">
+                        <div className="mb-1 flex items-center justify-between px-1">
+                          <span className="inline-flex items-center gap-1 font-sans text-[10px] font-semibold uppercase tracking-wider text-terracotta">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1" />
+                              <path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1" />
+                            </svg>
+                            Superset
+                          </span>
+                          <button
+                            onClick={() => unlink(g[0].superset_group!)}
+                            className="font-sans text-[11px] text-text-muted hover:text-burgundy"
+                          >
+                            Unlink
+                          </button>
+                        </div>
+                        <div className="space-y-1.5">
+                          {g.map((ae, i) => (
+                            <div key={ae.id} className="rounded-md border border-border bg-white px-3 py-2">
+                              <div className="mb-0.5 font-sans text-[10px] font-semibold uppercase tracking-wider text-terracotta/70">
+                                A{i + 1}
+                              </div>
+                              <Row ae={ae} />
                             </div>
-                            <Row ae={ae} />
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="rounded-lg border border-border bg-bg px-3 py-2">
-                      <Row ae={g[0]} />
-                      {thisIsSingle && nextIsSingle && (
-                        <button
-                          onClick={() => linkWithNext(gi)}
-                          className="mt-1.5 inline-flex items-center gap-1 font-sans text-[11px] font-medium text-text-muted transition hover:text-terracotta"
-                        >
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1" />
-                            <path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1" />
-                          </svg>
-                          Superset with next
-                        </button>
-                      )}
-                    </div>
-                  )}
+                    ) : (
+                      <div className="rounded-lg border border-border bg-bg px-3 py-2">
+                        <Row ae={g[0]} />
+                      </div>
+                    )}
+                  </div>
                 </div>
+
+                {gi < groups.length - 1 && (
+                  <div className="flex justify-center py-1">
+                    <button
+                      onClick={() => mergeAt(gi)}
+                      title="Merge into a superset"
+                      aria-label="Merge with next into a superset"
+                      className="flex h-6 w-6 items-center justify-center rounded-full border border-border bg-white text-text-muted transition hover:border-terracotta hover:text-terracotta"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
       )}
 
-      <AddAssignedExercise
-        workoutId={workout.id}
-        library={library}
-        nextOrder={list.length}
-        onAdded={onChanged}
-      />
+      <div className="mt-2">
+        <AddAssignedExercise
+          workoutId={workout.id}
+          library={library}
+          nextOrder={list.length}
+          onAdded={onChanged}
+        />
+      </div>
     </>
   );
 }
