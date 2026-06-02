@@ -37,6 +37,19 @@ export interface LiabilityWaiver {
   waiver_version: string;
 }
 
+export interface ClientAttachment {
+  id: string;
+  client_id: string;
+  title: string;
+  note: string | null;
+  file_path: string;
+  file_name: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  created_by: string | null;
+  created_at: string;
+}
+
 export interface Exercise {
   id: string;
   name: string;

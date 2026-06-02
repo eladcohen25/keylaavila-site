@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import TrainerLayout from "@/components/trainer/TrainerLayout";
 import AssignPanel from "@/components/trainer/AssignPanel";
 import NutritionEditor from "@/components/trainer/NutritionEditor";
+import AttachmentsPanel from "@/components/trainer/AttachmentsPanel";
 import Avatar from "@/components/portal/Avatar";
 import { getSupabaseBrowser } from "@/lib/supabase-browser";
 import {
@@ -54,7 +55,7 @@ interface Session {
   set_logs: SetLog[];
 }
 
-type Tab = "overview" | "assign" | "nutrition" | "checkins" | "workouts";
+type Tab = "overview" | "assign" | "nutrition" | "attachments" | "checkins" | "workouts";
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
@@ -132,6 +133,7 @@ function ClientDetail({ id }: { id: string }) {
     { id: "overview", label: "Overview" },
     { id: "assign", label: "Assign" },
     { id: "nutrition", label: "Nutrition" },
+    { id: "attachments", label: "Attachments" },
     { id: "checkins", label: `Check-ins${checkins.length ? ` (${checkins.length})` : ""}` },
     { id: "workouts", label: `Workouts${sessions.length ? ` (${sessions.length})` : ""}` },
   ];
@@ -190,6 +192,7 @@ function ClientDetail({ id }: { id: string }) {
       )}
       {tab === "assign" && <AssignPanel clientId={id} />}
       {tab === "nutrition" && <NutritionEditor clientId={id} />}
+      {tab === "attachments" && <AttachmentsPanel clientId={id} waiver={waiver} />}
       {tab === "checkins" && <CheckIns checkins={checkins} />}
       {tab === "workouts" && <Workouts sessions={sessions} />}
     </>
