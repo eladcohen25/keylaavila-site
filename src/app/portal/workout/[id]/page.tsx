@@ -58,8 +58,14 @@ function emptySet(percent = ""): SetState {
   return { percent, weight: "", reps: "", rpe: "", done: false, rest_taken_seconds: null, weightEdited: false };
 }
 
-function storageKey(id: string) {
-  return `kworkout:${id}`;
+function storageKey(id: string, clientId?: string) {
+  return clientId ? `ktrainerworkout:${clientId}:${id}` : `kworkout:${id}`;
+}
+
+export interface TrainerWorkoutContext {
+  clientId: string;
+  clientName: string;
+  backHref: string;
 }
 
 interface SupersetInfo {
@@ -102,7 +108,13 @@ function effectiveWeight(s: SetState, usePercent: boolean, oneRepMax: number | n
   return s.weight;
 }
 
-function WorkoutInner({ id }: { id: string }) {
+export function WorkoutInner({
+  id,
+  trainer,
+}: {
+  id: string;
+  trainer?: TrainerWorkoutContext;
+}) {
   const router = useRouter();
   const [workout, setWorkout] = useState<AssignedWorkout | null>(null);
   const [exercises, setExercises] = useState<LoadedExercise[]>([]);
@@ -133,13 +145,11 @@ function WorkoutInner({ id }: { id: string }) {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      const clientId = user?.id ?? null;
+      const clientId = trainer?.clientId ?? user?.id ?? null;
 
-      const { data: w } = await supabase
-        .from("assigned_workouts")
-        .select("*")
-        .eq("id", id)
-        .maybeSingle();
+      let workoutQuery = supabase.from("assigned_workouts").select("*").eq("id", id);
+      if (trainer) workoutQuery = workoutQuery.eq("client_id", trainer.clientId);
+      const { data: w } = await workoutQuery.maybeSingle();
 
       if (!w) {
         setNotFound(true);
@@ -224,7 +234,7 @@ function WorkoutInner({ id }: { id: string }) {
       // Restore local backup if present
       let restored: PersistedState | null = null;
       try {
-        const raw = localStorage.getItem(storageKey(id));
+        const raw = localStorage.getItem(storageKey(id, trainer?.clientId));
         if (raw) restored = JSON.parse(raw) as PersistedState;
       } catch {
         restored = null;
@@ -260,18 +270,18 @@ function WorkoutInner({ id }: { id: string }) {
       hydrated.current = true;
       setLoading(false);
     })();
-  }, [id]);
+  }, [id, trainer?.clientId]);
 
   // ─── Persist to localStorage on every change ─────────────────────────────
   useEffect(() => {
     if (!hydrated.current || startedAtMs === null) return;
     const payload: PersistedState = { startedAtMs, current, exercises: state };
     try {
-      localStorage.setItem(storageKey(id), JSON.stringify(payload));
+      localStorage.setItem(storageKey(id, trainer?.clientId), JSON.stringify(payload));
     } catch {
       // storage full / unavailable — ignore, in-memory state still holds
     }
-  }, [state, current, startedAtMs, id]);
+  }, [state, current, startedAtMs, id, trainer?.clientId]);
 
   // ─── Running elapsed timer ───────────────────────────────────────────────
   useEffect(() => {
@@ -455,21 +465,24 @@ function WorkoutInner({ id }: { id: string }) {
     const maxes = Object.entries(maxMap).map(([exercise_id, one_rep_max]) => ({ exercise_id, one_rep_max }));
 
     const startedIso = new Date(startedAtMs ?? Date.now()).toISOString();
-    const res = await fetch("/api/portal/workout-submit", {
+    const submitBody = {
+      assigned_workout_id: id,
+      day_label: workout?.day_label ?? "Workout",
+      started_at: startedIso,
+      completed_at: new Date().toISOString(),
+      total_duration_seconds: elapsed,
+      exercises: payloadExercises,
+      maxes,
+      ...(trainer ? { client_id: trainer.clientId } : {}),
+    };
+
+    const res = await fetch(trainer ? "/api/trainer/workout-submit" : "/api/portal/workout-submit", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify({
-        assigned_workout_id: id,
-        day_label: workout?.day_label ?? "Workout",
-        started_at: startedIso,
-        completed_at: new Date().toISOString(),
-        total_duration_seconds: elapsed,
-        exercises: payloadExercises,
-        maxes,
-      }),
+      body: JSON.stringify(submitBody),
     });
 
     const json = await res.json().catch(() => ({}));
@@ -480,7 +493,7 @@ function WorkoutInner({ id }: { id: string }) {
     }
 
     try {
-      localStorage.removeItem(storageKey(id));
+      localStorage.removeItem(storageKey(id, trainer?.clientId));
     } catch {}
     setSubmitted(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -493,10 +506,15 @@ function WorkoutInner({ id }: { id: string }) {
       <main className="mx-auto max-w-md px-5 py-20 text-center">
         <h1 className="font-serif text-2xl font-light text-text">Workout not found</h1>
         <p className="mt-2 font-sans text-sm text-text-muted">
-          This workout doesn&apos;t exist or isn&apos;t assigned to you.
+          {trainer
+            ? "This workout doesn't exist or isn't assigned to this client."
+            : "This workout doesn't exist or isn't assigned to you."}
         </p>
-        <Link href="/portal/dashboard" className="mt-6 inline-block font-sans text-sm font-medium text-terracotta">
-          ← Back to dashboard
+        <Link
+          href={trainer?.backHref ?? "/portal/dashboard"}
+          className="mt-6 inline-block font-sans text-sm font-medium text-terracotta"
+        >
+          ← {trainer ? "Back to client" : "Back to dashboard"}
         </Link>
       </main>
     );
@@ -516,13 +534,15 @@ function WorkoutInner({ id }: { id: string }) {
         </div>
         <h1 className="font-serif text-3xl font-light text-text">Workout complete</h1>
         <p className="mt-2 font-sans text-sm text-text-muted">
-          Logged {totalSets} sets in {formatDuration(elapsed)}. Keyla got your summary.
+          {trainer
+            ? `Logged ${totalSets} sets in ${formatDuration(elapsed)} for ${trainer.clientName}.`
+            : `Logged ${totalSets} sets in ${formatDuration(elapsed)}. Keyla got your summary.`}
         </p>
         <Link
-          href="/portal/dashboard"
+          href={trainer?.backHref ?? "/portal/dashboard"}
           className="mt-8 inline-block rounded-lg bg-terracotta px-6 py-3 font-sans text-sm font-medium text-white transition hover:bg-terracotta/90"
         >
-          Back to dashboard
+          {trainer ? "Back to client" : "Back to dashboard"}
         </Link>
       </main>
     );
@@ -535,8 +555,11 @@ function WorkoutInner({ id }: { id: string }) {
         <p className="mt-2 font-sans text-sm text-text-muted">
           This workout has no exercises assigned. Check back soon.
         </p>
-        <Link href="/portal/dashboard" className="mt-6 inline-block font-sans text-sm font-medium text-terracotta">
-          ← Back to dashboard
+        <Link
+          href={trainer?.backHref ?? "/portal/dashboard"}
+          className="mt-6 inline-block font-sans text-sm font-medium text-terracotta"
+        >
+          ← {trainer ? "Back to client" : "Back to dashboard"}
         </Link>
       </main>
     );
@@ -555,7 +578,7 @@ function WorkoutInner({ id }: { id: string }) {
       <div className="sticky top-0 z-30 bg-text text-bg shadow-sm">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
           <button
-            onClick={() => router.push("/portal/dashboard")}
+            onClick={() => router.push(trainer?.backHref ?? "/portal/dashboard")}
             className="flex h-9 w-9 items-center justify-center rounded-full text-bg/80 transition hover:bg-white/10 hover:text-bg"
             aria-label="Close workout"
           >
@@ -619,6 +642,17 @@ function WorkoutInner({ id }: { id: string }) {
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
+        {trainer && (
+          <div className="mb-4 rounded-xl border border-terracotta/30 bg-terracotta/[0.06] px-4 py-3 text-center">
+            <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-terracotta">
+              Logging for {trainer.clientName}
+            </p>
+            <p className="mt-0.5 font-sans text-xs text-text-muted">
+              This session saves to their account, same as if they logged it themselves.
+            </p>
+          </div>
+        )}
+
         {step?.kind === "warmup" && workout && (
           <WarmCoolPanel kind="warmup" text={workout.warmup_text} seconds={workout.warmup_seconds} />
         )}

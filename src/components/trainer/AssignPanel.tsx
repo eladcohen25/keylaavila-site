@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { getSupabaseBrowser } from "@/lib/supabase-browser";
 import { currentWeekMonday, formatDayLabel, type Exercise } from "@/lib/portal/types";
@@ -266,12 +267,22 @@ export default function AssignPanel({ clientId }: { clientId: string }) {
                   {w.status.replace("_", " ")}
                 </span>
               </div>
-              <button
-                onClick={() => deleteWorkout(w.id)}
-                className="font-sans text-xs text-text-muted hover:text-burgundy"
-              >
-                Delete
-              </button>
+              <div className="flex items-center gap-3">
+                {(w.status === "assigned" || w.status === "in_progress") && (
+                  <Link
+                    href={`/trainer/clients/${clientId}/workout/${w.id}`}
+                    className="rounded-lg bg-terracotta px-3 py-1.5 font-sans text-xs font-medium text-white transition hover:bg-terracotta/90"
+                  >
+                    {w.status === "in_progress" ? "Resume log" : "Log workout"}
+                  </Link>
+                )}
+                <button
+                  onClick={() => deleteWorkout(w.id)}
+                  className="font-sans text-xs text-text-muted hover:text-burgundy"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
 
             <WarmCoolEditor table="assigned_workouts" rowId={w.id} initial={w} />

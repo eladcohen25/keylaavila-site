@@ -3,7 +3,7 @@
 import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import TrainerLayout from "@/components/trainer/TrainerLayout";
 import AssignPanel from "@/components/trainer/AssignPanel";
 import NutritionEditor from "@/components/trainer/NutritionEditor";
@@ -62,15 +62,21 @@ function fmtDate(iso: string | null): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+const TAB_IDS: Tab[] = ["overview", "assign", "nutrition", "attachments", "checkins", "workouts"];
+
 function ClientDetail({ id }: { id: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab");
   const [profile, setProfile] = useState<Profile | null>(null);
   const [intake, setIntake] = useState<HealthIntake | null>(null);
   const [waiver, setWaiver] = useState<LiabilityWaiver | null>(null);
   const [checkins, setCheckins] = useState<CheckIn[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useState<Tab>(
+    initialTab && TAB_IDS.includes(initialTab as Tab) ? (initialTab as Tab) : "overview"
+  );
 
   useEffect(() => {
     (async () => {
