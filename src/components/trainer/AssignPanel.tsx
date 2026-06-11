@@ -4,11 +4,15 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { getSupabaseBrowser } from "@/lib/supabase-browser";
 import { currentWeekMonday, formatDayLabel, type Exercise } from "@/lib/portal/types";
-import { assignProgram, duplicateLastWeek } from "@/lib/trainer/assign";
+import { assignProgram, assignWorkoutTemplate, duplicateLastWeek } from "@/lib/trainer/assign";
 import { Card, PortalButton, TextInput } from "@/components/portal/ui";
 import { ExercisePrescriptionForm, WarmCoolEditor } from "@/app/trainer/programs/[id]/page";
 
 interface Program {
+  id: string;
+  name: string;
+}
+interface WorkoutTemplate {
   id: string;
   name: string;
 }
@@ -52,10 +56,13 @@ export default function AssignPanel({ clientId }: { clientId: string }) {
   const [weekOf, setWeekOf] = useState(currentWeekMonday());
   const [workouts, setWorkouts] = useState<AssignedWorkoutRow[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
+  const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
   const [library, setLibrary] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [programId, setProgramId] = useState("");
+  const [templateId, setTemplateId] = useState("");
+  const [templateDate, setTemplateDate] = useState("");
   const [newDayLabel, setNewDayLabel] = useState("");
   const [newDate, setNewDate] = useState("");
   const [msg, setMsg] = useState("");
@@ -91,11 +98,13 @@ export default function AssignPanel({ clientId }: { clientId: string }) {
   useEffect(() => {
     (async () => {
       const supabase = getSupabaseBrowser();
-      const [{ data: progs }, { data: lib }] = await Promise.all([
+      const [{ data: progs }, { data: tpls }, { data: lib }] = await Promise.all([
         supabase.from("programs").select("id, name").order("name"),
+        supabase.from("workout_templates").select("id, name").order("name"),
         supabase.from("exercises").select("*").order("name"),
       ]);
       setPrograms((progs as Program[]) ?? []);
+      setTemplates((tpls as WorkoutTemplate[]) ?? []);
       setLibrary((lib as Exercise[]) ?? []);
     })();
   }, []);
@@ -117,6 +126,30 @@ export default function AssignPanel({ clientId }: { clientId: string }) {
     setProgramId("");
     flash("Program assigned for this week.");
     loadWeek();
+  }
+
+  async function handleAssignTemplate() {
+    if (!templateId) return;
+    setBusy(true);
+    const targetWeek = templateDate
+      ? currentWeekMonday(new Date(templateDate + "T00:00:00"))
+      : weekOf;
+    await assignWorkoutTemplate(clientId, templateId, targetWeek, templateDate || null);
+    const tplName = templates.find((t) => t.id === templateId)?.name ?? "Workout";
+    setBusy(false);
+    setTemplateId("");
+    // Jump to the week we just assigned into so it's visible right away.
+    if (templateDate && targetWeek !== weekOf) {
+      setWeekOf(targetWeek);
+    } else {
+      loadWeek();
+    }
+    flash(
+      templateDate
+        ? `${tplName} added for ${formatDayLabel(templateDate)}.`
+        : `${tplName} added for this week.`
+    );
+    setTemplateDate("");
   }
 
   async function handleDuplicate() {
@@ -225,6 +258,32 @@ export default function AssignPanel({ clientId }: { clientId: string }) {
           </div>
           <PortalButton variant="secondary" onClick={handleDuplicate} disabled={busy}>
             ⧉ Duplicate last week
+          </PortalButton>
+        </div>
+
+        {/* Assign a saved single-session workout */}
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <select
+            value={templateId}
+            onChange={(e) => setTemplateId(e.target.value)}
+            className="flex-1 rounded-lg border border-border bg-white px-3 py-2 font-sans text-sm text-text outline-none focus:border-terracotta"
+          >
+            <option value="">Assign from workout…</option>
+            {templates.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+          <input
+            type="date"
+            value={templateDate}
+            onChange={(e) => setTemplateDate(e.target.value)}
+            title="Pin to a specific day (optional)"
+            className="rounded-lg border border-border bg-white px-3 py-2 font-sans text-sm text-text outline-none focus:border-terracotta sm:w-44"
+          />
+          <PortalButton onClick={handleAssignTemplate} disabled={!templateId || busy}>
+            Assign
           </PortalButton>
         </div>
 

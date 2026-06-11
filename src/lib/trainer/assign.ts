@@ -169,6 +169,102 @@ export async function assignProgramFromDate(
 }
 
 /**
+ * Assign a saved single-session workout template to a client. Clones the
+ * template (and its exercises, including supersets + warm-up/cool-down) into a
+ * single assigned_workout. If `scheduledDate` is provided the workout is pinned
+ * to that calendar day; otherwise it's added to `weekOf`. An optional `label`
+ * overrides the template name as the workout's day label.
+ */
+export async function assignWorkoutTemplate(
+  clientId: string,
+  templateId: string,
+  weekOf: string,
+  scheduledDate?: string | null,
+  label?: string
+): Promise<void> {
+  const supabase = getSupabaseBrowser();
+
+  const { data: tpl } = await supabase
+    .from("workout_templates")
+    .select("*, workout_template_exercises(*)")
+    .eq("id", templateId)
+    .maybeSingle();
+  if (!tpl) return;
+
+  const template = tpl as {
+    name: string;
+    warmup_text: string | null;
+    warmup_seconds: number | null;
+    cooldown_text: string | null;
+    cooldown_seconds: number | null;
+    workout_template_exercises: Array<{
+      exercise_id: string;
+      order_index: number;
+      target_sets: number | null;
+      target_reps: string | null;
+      target_rpe: string | null;
+      rest_seconds: number | null;
+      notes: string | null;
+      use_percent: boolean | null;
+      tempo: string | null;
+      percent_1rm: number | null;
+      each_side: boolean | null;
+      superset_group: string | null;
+      superset_order: number | null;
+    }>;
+  };
+
+  // Append after any workouts already in the target week.
+  const { data: existing } = await supabase
+    .from("assigned_workouts")
+    .select("id")
+    .eq("client_id", clientId)
+    .eq("week_of", weekOf);
+  const orderIndex = existing?.length ?? 0;
+
+  const { data: aw } = await supabase
+    .from("assigned_workouts")
+    .insert({
+      client_id: clientId,
+      week_of: weekOf,
+      scheduled_date: scheduledDate ?? null,
+      day_label: label?.trim() || template.name,
+      status: "assigned",
+      order_index: orderIndex,
+      warmup_text: template.warmup_text ?? null,
+      warmup_seconds: template.warmup_seconds ?? null,
+      cooldown_text: template.cooldown_text ?? null,
+      cooldown_seconds: template.cooldown_seconds ?? null,
+    })
+    .select("id")
+    .single();
+  if (!aw) return;
+
+  const exercises = [...(template.workout_template_exercises ?? [])].sort(
+    (a, b) => a.order_index - b.order_index
+  );
+  const rows = exercises.map((te) => ({
+    assigned_workout_id: aw.id,
+    exercise_id: te.exercise_id,
+    order_index: te.order_index,
+    target_sets: te.target_sets,
+    target_reps: te.target_reps,
+    target_rpe: te.target_rpe,
+    rest_seconds: te.rest_seconds,
+    notes: te.notes,
+    use_percent: te.use_percent ?? false,
+    tempo: te.tempo,
+    percent_1rm: te.percent_1rm,
+    each_side: te.each_side ?? false,
+    superset_group: te.superset_group ?? null,
+    superset_order: te.superset_order ?? 0,
+  }));
+  if (rows.length > 0) {
+    await supabase.from("assigned_exercises").insert(rows);
+  }
+}
+
+/**
  * Clone a client's most recent prior week of assigned workouts into a new week.
  * Returns the number of workouts duplicated.
  */

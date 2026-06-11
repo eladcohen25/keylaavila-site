@@ -12,6 +12,7 @@ const NAV = [
   { href: "/trainer/payments", label: "Payments", match: (p: string) => p.startsWith("/trainer/payments") },
   { href: "/trainer/calendar", label: "Calendar", match: (p: string) => p.startsWith("/trainer/calendar") },
   { href: "/trainer/exercises", label: "Exercises", match: (p: string) => p.startsWith("/trainer/exercises") },
+  { href: "/trainer/workouts", label: "Workouts", match: (p: string) => p.startsWith("/trainer/workouts") },
   { href: "/trainer/programs", label: "Programs", match: (p: string) => p.startsWith("/trainer/programs") },
 ];
 

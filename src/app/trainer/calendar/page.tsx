@@ -7,7 +7,7 @@ import CalendarMonth, { type DayMarks } from "@/components/portal/CalendarMonth"
 import { AddAssignedExercise } from "@/components/trainer/AssignPanel";
 import { useProfile } from "@/hooks/useProfile";
 import { getSupabaseBrowser } from "@/lib/supabase-browser";
-import { assignProgramFromDate } from "@/lib/trainer/assign";
+import { assignProgramFromDate, assignWorkoutTemplate } from "@/lib/trainer/assign";
 import { Card, Spinner, PortalButton, TextInput } from "@/components/portal/ui";
 import {
   addMonths,
@@ -32,6 +32,10 @@ interface Program {
   id: string;
   name: string;
 }
+interface WorkoutTemplate {
+  id: string;
+  name: string;
+}
 interface WorkoutWithExercises extends AssignedWorkout {
   assigned_exercises: Array<{
     id: string;
@@ -46,6 +50,7 @@ function TrainerCalendar() {
   const { profile } = useProfile();
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
+  const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
   const [library, setLibrary] = useState<Exercise[]>([]);
   const [clientId, setClientId] = useState<string>(""); // "" = all clients
 
@@ -67,13 +72,15 @@ function TrainerCalendar() {
   useEffect(() => {
     (async () => {
       const supabase = getSupabaseBrowser();
-      const [{ data: cl }, { data: pr }, { data: lib }] = await Promise.all([
+      const [{ data: cl }, { data: pr }, { data: tpls }, { data: lib }] = await Promise.all([
         supabase.from("profiles").select("id, full_name, email").eq("role", "client").order("full_name"),
         supabase.from("programs").select("id, name").order("name"),
+        supabase.from("workout_templates").select("id, name").order("name"),
         supabase.from("exercises").select("*").order("name"),
       ]);
       setClients((cl as ClientRow[]) ?? []);
       setPrograms((pr as Program[]) ?? []);
+      setTemplates((tpls as WorkoutTemplate[]) ?? []);
       setLibrary((lib as Exercise[]) ?? []);
     })();
   }, []);
@@ -160,6 +167,19 @@ function TrainerCalendar() {
     if (!clientId || !programId) return;
     setBusy(true);
     await assignProgramFromDate(clientId, programId, selected);
+    setBusy(false);
+    load();
+  }
+
+  async function assignTemplate(templateId: string) {
+    if (!clientId || !templateId) return;
+    setBusy(true);
+    await assignWorkoutTemplate(
+      clientId,
+      templateId,
+      currentWeekMonday(new Date(selected + "T00:00:00")),
+      selected
+    );
     setBusy(false);
     load();
   }
@@ -370,9 +390,11 @@ function TrainerCalendar() {
                 <DayTools
                   busy={busy}
                   programs={programs}
+                  templates={templates}
                   note={dayNote?.note ?? ""}
                   onAddWorkout={addWorkout}
                   onAssignProgram={assignProgram}
+                  onAssignTemplate={assignTemplate}
                   onAddEvent={addEvent}
                   onSaveNote={saveNote}
                 />
@@ -401,22 +423,27 @@ function TrainerCalendar() {
 function DayTools({
   busy,
   programs,
+  templates,
   note,
   onAddWorkout,
   onAssignProgram,
+  onAssignTemplate,
   onAddEvent,
   onSaveNote,
 }: {
   busy: boolean;
   programs: Program[];
+  templates: WorkoutTemplate[];
   note: string;
   onAddWorkout: (label: string) => void;
   onAssignProgram: (programId: string) => void;
+  onAssignTemplate: (templateId: string) => void;
   onAddEvent: (type: CalendarEventType, title: string, notes: string) => void;
   onSaveNote: (text: string) => void;
 }) {
   const [tab, setTab] = useState<"workout" | "program" | "event" | "note">("workout");
   const [label, setLabel] = useState("");
+  const [templateId, setTemplateId] = useState("");
   const [programId, setProgramId] = useState("");
   const [evType, setEvType] = useState<CalendarEventType>("session");
   const [evTitle, setEvTitle] = useState("");
@@ -455,30 +482,67 @@ function DayTools({
       </div>
 
       {tab === "workout" && (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="flex-1">
-            <label className="mb-1.5 block font-sans text-xs font-medium text-text-muted">Workout label</label>
-            <TextInput
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              placeholder="Push Day, Leg Session, In-Person…"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && label.trim()) {
-                  onAddWorkout(label);
-                  setLabel("");
-                }
+        <div className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="flex-1">
+              <label className="mb-1.5 block font-sans text-xs font-medium text-text-muted">
+                Assign a saved workout
+              </label>
+              <select
+                value={templateId}
+                onChange={(e) => setTemplateId(e.target.value)}
+                className={fieldCls}
+              >
+                <option value="">Choose a workout…</option>
+                {templates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <PortalButton
+              onClick={() => {
+                onAssignTemplate(templateId);
+                setTemplateId("");
               }}
-            />
+              disabled={!templateId || busy}
+            >
+              Assign
+            </PortalButton>
           </div>
-          <PortalButton
-            onClick={() => {
-              onAddWorkout(label);
-              setLabel("");
-            }}
-            disabled={!label.trim() || busy}
-          >
-            Add workout
-          </PortalButton>
+
+          <div className="flex items-center gap-3">
+            <span className="h-px flex-1 bg-border" />
+            <span className="font-sans text-[11px] uppercase tracking-wider text-text-muted">or</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="flex-1">
+              <label className="mb-1.5 block font-sans text-xs font-medium text-text-muted">Blank workout label</label>
+              <TextInput
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                placeholder="Push Day, Leg Session, In-Person…"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && label.trim()) {
+                    onAddWorkout(label);
+                    setLabel("");
+                  }
+                }}
+              />
+            </div>
+            <PortalButton
+              onClick={() => {
+                onAddWorkout(label);
+                setLabel("");
+              }}
+              disabled={!label.trim() || busy}
+            >
+              Add workout
+            </PortalButton>
+          </div>
         </div>
       )}
 

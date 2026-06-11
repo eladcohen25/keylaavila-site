@@ -386,7 +386,7 @@ export function WarmCoolEditor({
   rowId,
   initial,
 }: {
-  table: "program_days" | "assigned_workouts";
+  table: "program_days" | "assigned_workouts" | "workout_templates";
   rowId: string;
   initial: { warmup_text: string | null; warmup_seconds: number | null; cooldown_text: string | null; cooldown_seconds: number | null };
 }) {
