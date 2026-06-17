@@ -36,6 +36,8 @@ export interface SubmitBody {
   total_duration_seconds: number;
   exercises: SubmitExercise[];
   maxes?: SubmitMax[];
+  /** When set, replace this existing (re-opened) session instead of creating a new one. */
+  session_id?: string | null;
 }
 
 export async function submitWorkoutSession(
@@ -44,26 +46,53 @@ export async function submitWorkoutSession(
   body: SubmitBody,
   options?: { sendEmail?: boolean; clientName?: string }
 ): Promise<{ sessionId: string }> {
-  const { data: sessionRow, error: sessionErr } = await supabase
-    .from("workout_sessions")
-    .insert({
-      assigned_workout_id: body.assigned_workout_id,
-      client_id: clientId,
-      started_at: body.started_at,
-      completed_at: body.completed_at,
-      total_duration_seconds: body.total_duration_seconds,
-      submitted: true,
-    })
-    .select("id")
-    .single();
+  let sessionId: string;
 
-  if (sessionErr || !sessionRow) {
-    throw new Error(`Could not save session: ${sessionErr?.message ?? "unknown error"}`);
+  if (body.session_id) {
+    // Replace a re-opened (draft) session: update it in place and clear its
+    // prior set logs so the fresh submission becomes the single record.
+    const { data: updated, error: updErr } = await supabase
+      .from("workout_sessions")
+      .update({
+        assigned_workout_id: body.assigned_workout_id,
+        started_at: body.started_at,
+        completed_at: body.completed_at,
+        total_duration_seconds: body.total_duration_seconds,
+        submitted: true,
+      })
+      .eq("id", body.session_id)
+      .eq("client_id", clientId)
+      .select("id")
+      .single();
+
+    if (updErr || !updated) {
+      throw new Error(`Could not update session: ${updErr?.message ?? "session not found"}`);
+    }
+    sessionId = updated.id;
+    await supabase.from("set_logs").delete().eq("workout_session_id", sessionId);
+  } else {
+    const { data: sessionRow, error: sessionErr } = await supabase
+      .from("workout_sessions")
+      .insert({
+        assigned_workout_id: body.assigned_workout_id,
+        client_id: clientId,
+        started_at: body.started_at,
+        completed_at: body.completed_at,
+        total_duration_seconds: body.total_duration_seconds,
+        submitted: true,
+      })
+      .select("id")
+      .single();
+
+    if (sessionErr || !sessionRow) {
+      throw new Error(`Could not save session: ${sessionErr?.message ?? "unknown error"}`);
+    }
+    sessionId = sessionRow.id;
   }
 
   const setRows = body.exercises.flatMap((ex) =>
     ex.sets.map((s) => ({
-      workout_session_id: sessionRow.id,
+      workout_session_id: sessionId,
       assigned_exercise_id: ex.assigned_exercise_id,
       set_number: s.set_number,
       weight: s.weight,
@@ -142,5 +171,5 @@ export async function submitWorkoutSession(
     }
   }
 
-  return { sessionId: sessionRow.id };
+  return { sessionId };
 }

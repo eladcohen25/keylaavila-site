@@ -137,6 +137,9 @@ export function WorkoutInner({
     nextStepIndex: number | null;
   } | null>(null);
   const hydrated = useRef(false);
+  // Set when this workout was re-opened by the trainer: the un-submitted session
+  // to replace (instead of inserting a new one) when the client re-submits.
+  const resumeSessionId = useRef<string | null>(null);
 
   // ─── Load workout + exercises + maxes + last-time, restore local backup ────
   useEffect(() => {
@@ -231,6 +234,47 @@ export function WorkoutInner({
         }
       }
 
+      // Re-opened workout: pull the most recent un-submitted (draft) session for
+      // THIS workout so the client picks up exactly where they left off. Its
+      // logs pre-fill the screen, and re-submitting replaces this session.
+      interface DraftLog {
+        assigned_exercise_id: string | null;
+        set_number: number;
+        weight: number | null;
+        reps: number | null;
+        rpe: number | null;
+        percent_1rm: number | null;
+        rest_taken_seconds: number | null;
+        done: boolean;
+        notes: string | null;
+      }
+      let draftSets: Record<string, DraftLog[]> | null = null;
+      if (clientId) {
+        const { data: draft } = await supabase
+          .from("workout_sessions")
+          .select("id")
+          .eq("client_id", clientId)
+          .eq("assigned_workout_id", id)
+          .eq("submitted", false)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (draft) {
+          resumeSessionId.current = (draft as { id: string }).id;
+          const { data: logs } = await supabase
+            .from("set_logs")
+            .select("assigned_exercise_id, set_number, weight, reps, rpe, percent_1rm, rest_taken_seconds, done, notes")
+            .eq("workout_session_id", resumeSessionId.current);
+          const byAe: Record<string, DraftLog[]> = {};
+          for (const row of (logs as DraftLog[]) ?? []) {
+            if (!row.assigned_exercise_id) continue;
+            (byAe[row.assigned_exercise_id] ??= []).push(row);
+          }
+          for (const k of Object.keys(byAe)) byAe[k].sort((a, b) => a.set_number - b.set_number);
+          draftSets = byAe;
+        }
+      }
+
       // Restore local backup if present
       let restored: PersistedState | null = null;
       try {
@@ -247,17 +291,44 @@ export function WorkoutInner({
       } else {
         const initial: Record<string, ExerciseState> = {};
         for (const ae of loaded) {
-          const count = ae.target_sets && ae.target_sets > 0 ? ae.target_sets : 3;
-          const pct = ae.percent_1rm != null ? String(ae.percent_1rm) : "";
-          initial[ae.id] = {
-            assigned_exercise_id: ae.id,
-            notes: "",
-            usePercent: !!ae.use_percent,
-            eachSide: !!ae.each_side,
-            oneRepMax: maxMap[ae.exercise_id] != null ? String(maxMap[ae.exercise_id]) : "",
-            showRpe: false,
-            sets: Array.from({ length: count }, () => emptySet(pct)),
-          };
+          const logs = draftSets?.[ae.id];
+          const orm = maxMap[ae.exercise_id] != null ? String(maxMap[ae.exercise_id]) : "";
+          if (logs && logs.length > 0) {
+            initial[ae.id] = {
+              assigned_exercise_id: ae.id,
+              notes: logs.find((l) => l.notes)?.notes ?? "",
+              usePercent: logs.some((l) => l.percent_1rm != null) || !!ae.use_percent,
+              eachSide: !!ae.each_side,
+              oneRepMax: orm,
+              showRpe: logs.some((l) => l.rpe != null),
+              sets: logs.map((l) => ({
+                percent:
+                  l.percent_1rm != null
+                    ? String(l.percent_1rm)
+                    : ae.percent_1rm != null
+                      ? String(ae.percent_1rm)
+                      : "",
+                weight: l.weight != null ? String(l.weight) : "",
+                reps: l.reps != null ? String(l.reps) : "",
+                rpe: l.rpe != null ? String(l.rpe) : "",
+                done: l.done,
+                rest_taken_seconds: l.rest_taken_seconds,
+                weightEdited: true,
+              })),
+            };
+          } else {
+            const count = ae.target_sets && ae.target_sets > 0 ? ae.target_sets : 3;
+            const pct = ae.percent_1rm != null ? String(ae.percent_1rm) : "";
+            initial[ae.id] = {
+              assigned_exercise_id: ae.id,
+              notes: "",
+              usePercent: !!ae.use_percent,
+              eachSide: !!ae.each_side,
+              oneRepMax: orm,
+              showRpe: false,
+              sets: Array.from({ length: count }, () => emptySet(pct)),
+            };
+          }
         }
         setState(initial);
         setStartedAtMs(Date.now());
@@ -473,6 +544,7 @@ export function WorkoutInner({
       total_duration_seconds: elapsed,
       exercises: payloadExercises,
       maxes,
+      ...(resumeSessionId.current ? { session_id: resumeSessionId.current } : {}),
       ...(trainer ? { client_id: trainer.clientId } : {}),
     };
 
