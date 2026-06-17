@@ -194,34 +194,6 @@ export default function AssignPanel({ clientId }: { clientId: string }) {
     loadWeek();
   }
 
-  async function reopenWorkout(id: string) {
-    if (
-      !confirm(
-        "Re-open this completed workout? The client can finish it with their logged sets kept, and their original entry will be updated when they re-submit."
-      )
-    )
-      return;
-    setBusy(true);
-    const supabase = getSupabaseBrowser();
-    // Flip the workout back to in-progress so it's actionable again.
-    await supabase.from("assigned_workouts").update({ status: "in_progress" }).eq("id", id);
-    // Un-submit the latest logged session so it becomes a resumable draft that
-    // pre-fills the client's screen and gets replaced (not duplicated) on re-submit.
-    const { data: sess } = await supabase
-      .from("workout_sessions")
-      .select("id")
-      .eq("assigned_workout_id", id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (sess) {
-      await supabase.from("workout_sessions").update({ submitted: false }).eq("id", (sess as { id: string }).id);
-    }
-    setBusy(false);
-    flash("Workout re-opened. The client can finish it from their dashboard.");
-    loadWeek();
-  }
-
   const weekLabel = new Date(weekOf + "T00:00:00").toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
@@ -362,15 +334,6 @@ export default function AssignPanel({ clientId }: { clientId: string }) {
                   >
                     {w.status === "in_progress" ? "Resume log" : "Log workout"}
                   </Link>
-                )}
-                {w.status === "completed" && (
-                  <button
-                    onClick={() => reopenWorkout(w.id)}
-                    disabled={busy}
-                    className="rounded-lg border border-terracotta px-3 py-1.5 font-sans text-xs font-medium text-terracotta transition hover:bg-terracotta hover:text-white disabled:opacity-50"
-                  >
-                    Re-open
-                  </button>
                 )}
                 <button
                   onClick={() => deleteWorkout(w.id)}
