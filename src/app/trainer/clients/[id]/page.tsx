@@ -51,6 +51,7 @@ interface Session {
   completed_at: string | null;
   total_duration_seconds: number | null;
   day_label?: string;
+  assigned_workout_id: string | null;
   assigned_workout: { day_label: string } | null;
   set_logs: SetLog[];
 }
@@ -133,6 +134,25 @@ function ClientDetail({ id }: { id: string }) {
     })();
   }, [id, router]);
 
+  async function reopenSession(session: Session) {
+    if (!session.assigned_workout_id) return;
+    if (
+      !confirm(
+        "Re-open this workout so the client can finish it? Their logged sets are kept, and re-submitting will update this same entry (no duplicate)."
+      )
+    )
+      return;
+    const supabase = getSupabaseBrowser();
+    await supabase
+      .from("assigned_workouts")
+      .update({ status: "in_progress" })
+      .eq("id", session.assigned_workout_id);
+    await supabase.from("workout_sessions").update({ submitted: false }).eq("id", session.id);
+    // It's now a resumable draft, so it drops out of the submitted history until
+    // the client (or Keyla) re-finishes it.
+    setSessions((prev) => prev.filter((s) => s.id !== session.id));
+  }
+
   if (loading || !profile) return <Spinner />;
 
   const tabs: { id: Tab; label: string }[] = [
@@ -200,7 +220,7 @@ function ClientDetail({ id }: { id: string }) {
       {tab === "nutrition" && <NutritionEditor clientId={id} />}
       {tab === "attachments" && <AttachmentsPanel clientId={id} waiver={waiver} />}
       {tab === "checkins" && <CheckIns checkins={checkins} />}
-      {tab === "workouts" && <Workouts sessions={sessions} />}
+      {tab === "workouts" && <Workouts sessions={sessions} onReopen={reopenSession} />}
     </>
   );
 }
@@ -513,7 +533,7 @@ function Photo({ url, label }: { url: string; label: string }) {
   );
 }
 
-function Workouts({ sessions }: { sessions: Session[] }) {
+function Workouts({ sessions, onReopen }: { sessions: Session[]; onReopen: (s: Session) => void }) {
   if (sessions.length === 0) {
     return (
       <Card className="text-center">
@@ -533,14 +553,24 @@ function Workouts({ sessions }: { sessions: Session[] }) {
         }
         return (
           <Card key={s.id}>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <h3 className="font-sans text-base font-medium text-text">
                 {s.assigned_workout?.day_label ?? "Workout"}
               </h3>
-              <span className="rounded-full bg-bg-alt px-3 py-1 font-sans text-xs font-medium text-text-muted">
-                {fmtDate(s.completed_at ?? s.created_at)} ·{" "}
-                {s.total_duration_seconds != null ? formatDuration(s.total_duration_seconds) : "—"}
-              </span>
+              <div className="flex shrink-0 items-center gap-3">
+                <span className="rounded-full bg-bg-alt px-3 py-1 font-sans text-xs font-medium text-text-muted">
+                  {fmtDate(s.completed_at ?? s.created_at)} ·{" "}
+                  {s.total_duration_seconds != null ? formatDuration(s.total_duration_seconds) : "—"}
+                </span>
+                {s.assigned_workout_id && (
+                  <button
+                    onClick={() => onReopen(s)}
+                    className="rounded-lg border border-terracotta px-3 py-1.5 font-sans text-xs font-medium text-terracotta transition hover:bg-terracotta hover:text-white"
+                  >
+                    Re-open
+                  </button>
+                )}
+              </div>
             </div>
             <div className="mt-3 space-y-3">
               {[...groups.entries()].map(([name, logs]) => (
