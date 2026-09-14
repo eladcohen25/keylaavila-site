@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
-@theme inline {
+/* Colors are declared non-inline so utilities reference the CSS variables —
+   this lets .theme-app below re-skin the app area without touching the
+   marketing site. */
+@theme {
   --color-bg: #F5F0EA;
   --color-bg-alt: #EDE5D8;
   --color-terracotta: #C4714A;
@@ -10,9 +13,39 @@
   --color-text: #1C1917;
   --color-text-muted: #6B5F57;
   --color-border: #D4C0B5;
+}
 
+@theme inline {
   --font-serif: var(--font-cormorant);
   --font-sans: var(--font-dm-sans);
+}
+
+/* ─── App design system (client portal + trainer backend) ────────────────────
+   Neutral, modern training-platform palette. The legacy token names are kept
+   (terracotta = accent, olive = success, burgundy/blush = danger) so every
+   existing component picks up the new look automatically. */
+.theme-app {
+  --color-bg: #F7F7F8;
+  --color-bg-alt: #EEEFF2;
+  --color-terracotta: #4F46E5; /* accent — indigo */
+  --color-burgundy: #DC2626;   /* danger */
+  --color-blush: #FEE2E2;      /* danger surface */
+  --color-olive: #059669;      /* success */
+  --color-text: #111827;
+  --color-text-muted: #6B7280;
+  --color-border: #E5E7EB;
+
+  /* Headings render in the app's sans face instead of the marketing serif. */
+  --font-cormorant: var(--font-dm-sans);
+
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+/* Serif utilities double as "display" text in-app: strong sans headings. */
+.theme-app .font-serif {
+  font-weight: 600 !important;
+  letter-spacing: -0.02em;
 }
 
 html {

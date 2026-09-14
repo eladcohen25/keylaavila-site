@@ -12,13 +12,13 @@ export default function AuthShell({
   footer?: ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-bg px-5 py-12">
+    <div className="theme-app flex min-h-screen items-center justify-center bg-bg px-5 py-12">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <span className="mb-3 inline-block font-sans text-[11px] font-medium uppercase tracking-[0.18em] text-terracotta">
-            Client Portal
+          <span className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-terracotta font-sans text-base font-bold text-white">
+            KA
           </span>
-          <h1 className="font-serif text-3xl font-light tracking-tight text-text">
+          <h1 className="font-serif text-3xl tracking-tight text-text">
             {title}
           </h1>
           {subtitle && (

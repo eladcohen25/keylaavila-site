@@ -56,7 +56,7 @@ export default function PortalGate({
 
   if (loading || !session || !profile) {
     return (
-      <div className="min-h-screen bg-bg">
+      <div className="theme-app min-h-screen bg-bg">
         <Spinner />
       </div>
     );
@@ -64,16 +64,17 @@ export default function PortalGate({
 
   if (profile.role === "trainer") {
     return (
-      <div className="min-h-screen bg-bg">
+      <div className="theme-app min-h-screen bg-bg">
         <Spinner />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-bg">
+    <div className="theme-app min-h-screen bg-bg">
       {!hideHeader && <PortalHeader name={profile.full_name ?? undefined} />}
-      {children}
+      {/* Bottom padding clears the mobile tab bar */}
+      <div className={hideHeader ? undefined : "pb-20 md:pb-0"}>{children}</div>
     </div>
   );
 }

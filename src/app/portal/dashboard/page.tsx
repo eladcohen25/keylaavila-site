@@ -8,17 +8,18 @@ import { getSupabaseBrowser } from "@/lib/supabase-browser";
 import { currentWeekMonday, formatDayLabel, type AssignedWorkout } from "@/lib/portal/types";
 import { Card, Spinner } from "@/components/portal/ui";
 
-const STATUS_STYLES: Record<string, string> = {
-  assigned: "bg-bg-alt text-text-muted",
-  in_progress: "bg-blush text-burgundy",
-  completed: "bg-olive/15 text-olive",
-};
-
 const STATUS_LABEL: Record<string, string> = {
   assigned: "Not started",
   in_progress: "In progress",
   completed: "Completed",
 };
+
+function localDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
 function DashboardInner() {
   const { profile } = useProfile();
@@ -49,99 +50,138 @@ function DashboardInner() {
   }, [profile]);
 
   const firstName = profile?.full_name?.split(" ")[0] || "there";
-  const weekLabel = new Date(currentWeekMonday()).toLocaleDateString("en-US", {
+  const today = localDateStr(new Date());
+  const todayLabel = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
     month: "long",
     day: "numeric",
   });
 
+  // Hero: today's scheduled workout first, otherwise the next incomplete one.
+  const incomplete = workouts.filter((w) => w.status !== "completed");
+  const hero =
+    incomplete.find((w) => w.scheduled_date === today) ?? incomplete[0] ?? null;
+  const rest = workouts.filter((w) => w.id !== hero?.id);
+  const doneCount = workouts.filter((w) => w.status === "completed").length;
+
   return (
-    <main className="mx-auto max-w-5xl px-5 py-8">
-      <div className="mb-8">
-        <h1 className="font-serif text-3xl font-light tracking-tight text-text md:text-4xl">
+    <main className="mx-auto max-w-3xl px-5 py-8">
+      <div className="mb-7">
+        <p className="font-sans text-sm text-text-muted">{todayLabel}</p>
+        <h1 className="mt-0.5 font-serif text-3xl tracking-tight text-text">
           Hi {firstName}
         </h1>
-        <p className="mt-1 font-sans text-sm text-text-muted">
-          Here&apos;s your training for the week of {weekLabel}.
-        </p>
+        {workouts.length > 0 && (
+          <p className="mt-1.5 font-sans text-sm text-text-muted">
+            {doneCount} of {workouts.length} workout{workouts.length === 1 ? "" : "s"} done this week
+          </p>
+        )}
       </div>
 
-      {/* This week's workouts */}
-      <section className="mb-10">
-        <h2 className="mb-4 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-text-muted">
-          This week&apos;s workouts
-        </h2>
+      {loading ? (
+        <Spinner />
+      ) : (
+        <>
+          {/* Hero: today / next up */}
+          {hero ? (
+            <Link href={`/portal/workout/${hero.id}`} className="block">
+              <div className="rounded-2xl bg-terracotta p-6 text-white shadow-md transition hover:shadow-lg">
+                <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80">
+                  {hero.scheduled_date === today ? "Today's workout" : "Next up"}
+                </p>
+                <h2 className="mt-1.5 font-sans text-2xl font-semibold tracking-tight">
+                  {hero.day_label}
+                </h2>
+                {hero.scheduled_date && (
+                  <p className="mt-1 font-sans text-sm text-white/80">
+                    {formatDayLabel(hero.scheduled_date)}
+                  </p>
+                )}
+                <span className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 font-sans text-sm font-semibold text-terracotta">
+                  {hero.status === "in_progress" ? "Resume workout" : "Start workout"}
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </span>
+              </div>
+            </Link>
+          ) : workouts.length > 0 ? (
+            <Card className="border-olive/30 bg-olive/5 text-center">
+              <p className="font-sans text-2xl">🎉</p>
+              <p className="mt-1 font-sans text-base font-semibold text-text">All done for the week!</p>
+              <p className="mt-1 font-sans text-sm text-text-muted">
+                Every workout is complete. Great work.
+              </p>
+            </Card>
+          ) : (
+            <Card className="text-center">
+              <p className="font-sans text-sm text-text-muted">
+                No workouts assigned this week yet. Keyla will set you up soon.
+              </p>
+            </Card>
+          )}
 
-        {loading ? (
-          <Spinner />
-        ) : workouts.length === 0 ? (
-          <Card className="text-center">
-            <p className="font-sans text-sm text-text-muted">
-              No workouts assigned for this week yet. Keyla will add them soon.
-            </p>
-          </Card>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {workouts.map((w) => {
-              const done = w.status === "completed";
-              const inner = (
-                <Card
-                  className={`flex items-center justify-between transition ${
-                    done ? "opacity-70" : "hover:border-terracotta/40 hover:shadow-md"
-                  }`}
-                >
-                  <div>
-                    {w.scheduled_date && (
-                      <p className="mb-0.5 font-sans text-[11px] font-semibold uppercase tracking-wider text-terracotta">
-                        {formatDayLabel(w.scheduled_date)}
-                      </p>
-                    )}
-                    <h3 className="font-sans text-base font-medium text-text">
-                      {w.day_label}
-                    </h3>
-                    <span
-                      className={`mt-1.5 inline-block rounded-full px-2.5 py-0.5 font-sans text-[11px] font-medium ${
-                        STATUS_STYLES[w.status]
+          {/* Rest of the week */}
+          {rest.length > 0 && (
+            <section className="mt-8">
+              <h2 className="mb-3 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-text-muted">
+                This week
+              </h2>
+              <div className="space-y-2.5">
+                {rest.map((w) => {
+                  const done = w.status === "completed";
+                  const inner = (
+                    <div
+                      className={`flex items-center justify-between gap-3 rounded-2xl border border-border bg-white p-4 shadow-sm transition ${
+                        done ? "opacity-70" : "hover:border-terracotta/40 hover:shadow-md"
                       }`}
                     >
-                      {STATUS_LABEL[w.status]}
-                    </span>
-                  </div>
-                  {!done && (
-                    <span className="font-sans text-sm font-medium text-terracotta">
-                      {w.status === "in_progress" ? "Resume →" : "Start →"}
-                    </span>
-                  )}
-                  {done && (
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6B7355" strokeWidth="2">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  )}
-                </Card>
-              );
-              return done ? (
-                <div key={w.id}>{inner}</div>
-              ) : (
-                <Link key={w.id} href={`/portal/workout/${w.id}`}>
-                  {inner}
-                </Link>
-              );
-            })}
-          </div>
-        )}
-      </section>
+                      <div className="min-w-0">
+                        <h3 className="truncate font-sans text-sm font-semibold text-text">{w.day_label}</h3>
+                        <p className="mt-0.5 font-sans text-xs text-text-muted">
+                          {w.scheduled_date ? formatDayLabel(w.scheduled_date) : STATUS_LABEL[w.status]}
+                          {w.scheduled_date ? ` · ${STATUS_LABEL[w.status]}` : ""}
+                        </p>
+                      </div>
+                      {done ? (
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-olive/15 text-olive">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        </span>
+                      ) : (
+                        <span className="shrink-0 font-sans text-sm font-medium text-terracotta">
+                          {w.status === "in_progress" ? "Resume →" : "Start →"}
+                        </span>
+                      )}
+                    </div>
+                  );
+                  return done ? (
+                    <div key={w.id}>{inner}</div>
+                  ) : (
+                    <Link key={w.id} href={`/portal/workout/${w.id}`} className="block">
+                      {inner}
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+        </>
+      )}
 
-      {/* Quick links */}
-      <section>
-        <h2 className="mb-4 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-text-muted">
-          Quick links
+      {/* Quick actions */}
+      <section className="mt-8">
+        <h2 className="mb-3 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-text-muted">
+          Quick actions
         </h2>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-2.5 sm:grid-cols-3">
           <QuickLink
             href={profile ? `/checkin/${profile.id}` : "/checkin"}
             title="Weekly Check-In"
-            desc="Log your week & progress photos"
+            desc="Log your week & photos"
           />
-          <QuickLink href="/portal/nutrition" title="Nutrition" desc="Your meal plan & macros" />
+          <QuickLink href="/portal/nutrition" title="Nutrition" desc="Meal plan & macros" />
           <QuickLink href="/portal/profile" title="Profile" desc="History & your info" />
         </div>
       </section>
@@ -152,9 +192,9 @@ function DashboardInner() {
 function QuickLink({ href, title, desc }: { href: string; title: string; desc: string }) {
   return (
     <Link href={href}>
-      <Card className="h-full transition hover:border-terracotta/40 hover:shadow-md">
-        <h3 className="font-sans text-sm font-medium text-text">{title}</h3>
-        <p className="mt-1 font-sans text-xs text-text-muted">{desc}</p>
+      <Card className="h-full !p-4 transition hover:border-terracotta/40 hover:shadow-md">
+        <h3 className="font-sans text-sm font-semibold text-text">{title}</h3>
+        <p className="mt-0.5 font-sans text-xs text-text-muted">{desc}</p>
       </Card>
     </Link>
   );

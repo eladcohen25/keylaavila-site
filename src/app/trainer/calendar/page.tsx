@@ -411,7 +411,7 @@ function TrainerCalendar() {
       </div>
 
       <Link
-        href="/trainer"
+        href="/trainer/clients"
         className="mt-6 inline-flex items-center gap-1 font-sans text-sm text-text-muted hover:text-text"
       >
         ← Back to clients

@@ -98,7 +98,7 @@ function ClientDetail({ id }: { id: string }) {
         .eq("id", id)
         .maybeSingle();
       if (!prof) {
-        router.replace("/trainer");
+        router.replace("/trainer/clients");
         return;
       }
       setProfile(prof as Profile);
@@ -193,7 +193,7 @@ function ClientDetail({ id }: { id: string }) {
   return (
     <>
       <Link
-        href="/trainer"
+        href="/trainer/clients"
         className="mb-4 inline-flex items-center gap-1 font-sans text-sm text-text-muted hover:text-text"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -222,6 +222,20 @@ function ClientDetail({ id }: { id: string }) {
             </Link>
           </div>
         </div>
+      </div>
+
+      {/* Snapshot strip */}
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Snapshot label="Last workout" value={sessions[0] ? fmtDate(sessions[0].completed_at ?? sessions[0].created_at) : "—"} sub={`${sessions.length} logged`} />
+        <Snapshot label="Last check-in" value={checkins[0] ? fmtDate(checkins[0].created_at) : "—"} sub={`${checkins.length} total`} />
+        <Snapshot
+          label="Latest weight"
+          value={(() => {
+            const w = checkins.find((c) => c.weight != null)?.weight;
+            return w != null ? `${w} lbs` : "—";
+          })()}
+        />
+        <Snapshot label="Progress photos" value={String(photoCount)} />
       </div>
 
       {/* Tabs */}
@@ -402,7 +416,7 @@ function DangerZone({ clientId, clientName }: { clientId: string; clientName: st
       setDeleting(false);
       return;
     }
-    router.replace("/trainer");
+    router.replace("/trainer/clients");
   }
 
   return (
@@ -626,6 +640,16 @@ function Workouts({ sessions, onReopen }: { sessions: Session[]; onReopen: (s: S
           </Card>
         );
       })}
+    </div>
+  );
+}
+
+function Snapshot({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="rounded-2xl border border-border bg-white p-3.5 shadow-sm">
+      <p className="font-sans text-[10px] font-semibold uppercase tracking-wider text-text-muted">{label}</p>
+      <p className="mt-0.5 font-sans text-sm font-semibold text-text">{value}</p>
+      {sub && <p className="font-sans text-[11px] text-text-muted">{sub}</p>}
     </div>
   );
 }

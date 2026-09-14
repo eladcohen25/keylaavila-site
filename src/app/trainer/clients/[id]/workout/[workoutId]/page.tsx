@@ -44,20 +44,22 @@ export default function TrainerClientWorkoutPage({
 
   if (loading || !profile || profile.role !== "trainer" || clientName === null) {
     return (
-      <div className="min-h-screen bg-bg">
+      <div className="theme-app min-h-screen bg-bg">
         <Spinner />
       </div>
     );
   }
 
   return (
-    <WorkoutInner
-      id={workoutId}
-      trainer={{
-        clientId,
-        clientName,
-        backHref: `/trainer/clients/${clientId}?tab=assign`,
-      }}
-    />
+    <div className="theme-app">
+      <WorkoutInner
+        id={workoutId}
+        trainer={{
+          clientId,
+          clientName,
+          backHref: `/trainer/clients/${clientId}?tab=assign`,
+        }}
+      />
+    </div>
   );
 }

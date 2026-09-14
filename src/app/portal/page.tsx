@@ -25,7 +25,7 @@ export default function PortalIndex() {
   }, [session, profile, sessionLoading, profileLoading, router]);
 
   return (
-    <div className="min-h-screen bg-bg">
+    <div className="theme-app min-h-screen bg-bg">
       <Spinner />
     </div>
   );
