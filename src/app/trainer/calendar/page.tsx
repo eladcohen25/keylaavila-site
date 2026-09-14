@@ -27,6 +27,7 @@ interface ClientRow {
   id: string;
   full_name: string | null;
   email: string | null;
+  color: string | null;
 }
 interface Program {
   id: string;
@@ -73,7 +74,7 @@ function TrainerCalendar() {
     (async () => {
       const supabase = getSupabaseBrowser();
       const [{ data: cl }, { data: pr }, { data: tpls }, { data: lib }] = await Promise.all([
-        supabase.from("profiles").select("id, full_name, email").eq("role", "client").order("full_name"),
+        supabase.from("profiles").select("id, full_name, email, color").eq("role", "client").order("full_name"),
         supabase.from("programs").select("id, name").order("name"),
         supabase.from("workout_templates").select("id, name").order("name"),
         supabase.from("exercises").select("*").order("name"),
@@ -140,6 +141,23 @@ function TrainerCalendar() {
   const nameOf = useCallback(
     (cid: string) => clients.find((c) => c.id === cid)?.full_name || "Unnamed client",
     [clients]
+  );
+  const colorOf = useCallback(
+    (cid: string) => clients.find((c) => c.id === cid)?.color ?? null,
+    [clients]
+  );
+
+  /** Client name with their label-color dot (shown in all-clients view). */
+  const clientChip = useCallback(
+    (cid: string) => (
+      <span className="inline-flex items-center gap-1.5 font-sans text-xs text-text-muted">
+        {colorOf(cid) && (
+          <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: colorOf(cid)! }} />
+        )}
+        {nameOf(cid)}
+      </span>
+    ),
+    [colorOf, nameOf]
   );
 
   const dayWorkouts = workouts.filter((w) => w.scheduled_date === selected);
@@ -294,7 +312,7 @@ function TrainerCalendar() {
                     <div className="flex items-center gap-2">
                       <h3 className="font-sans text-base font-medium text-text">{w.day_label}</h3>
                       {!clientId && (
-                        <span className="font-sans text-xs text-text-muted">· {nameOf(w.client_id)}</span>
+                        <span className="font-sans text-xs text-text-muted">· {clientChip(w.client_id)}</span>
                       )}
                       <span
                         className={`rounded-full px-2 py-0.5 font-sans text-[10px] font-medium uppercase tracking-wider ${
@@ -353,7 +371,7 @@ function TrainerCalendar() {
                           {meta.label}
                         </span>
                         {!clientId && (
-                          <span className="font-sans text-xs text-text-muted">· {nameOf(e.client_id)}</span>
+                          <span className="font-sans text-xs text-text-muted">· {clientChip(e.client_id)}</span>
                         )}
                       </div>
                       {clientId && (

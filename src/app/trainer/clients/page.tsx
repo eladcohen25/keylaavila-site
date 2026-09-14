@@ -110,7 +110,7 @@ function ClientList() {
               className="group grid w-full grid-cols-[1fr_auto] items-center gap-3 border-b border-border px-4 py-3.5 text-left transition last:border-0 hover:bg-bg-alt/50 sm:grid-cols-[1fr_110px_120px_120px_24px] sm:gap-4 sm:px-5"
             >
               <span className="flex min-w-0 items-center gap-3">
-                <Avatar name={c.full_name} url={c.avatar_url} size={38} />
+                <Avatar name={c.full_name} url={c.avatar_url} size={38} color={c.color} />
                 <span className="min-w-0">
                   <span className="block truncate font-sans text-sm font-medium text-text group-hover:text-terracotta">
                     {c.full_name || "Unnamed"}

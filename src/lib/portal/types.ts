@@ -7,6 +7,8 @@ export interface Profile {
   email: string | null;
   phone: string | null;
   avatar_url: string | null;
+  /** Trainer-assigned label color (hex), used across lists and the calendar. */
+  color: string | null;
   created_at: string;
   onboarding_complete: boolean;
 }

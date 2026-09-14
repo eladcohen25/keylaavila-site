@@ -111,6 +111,17 @@ function Dashboard() {
   const byId = new Map(clients.map((c) => [c.id, c]));
   const nameOf = (id: string | null, fallback = "Client") =>
     (id && byId.get(id)?.full_name) || fallback;
+  const colorOf = (id: string | null) => (id && byId.get(id)?.color) || null;
+
+  const ClientTag = ({ id, extra }: { id: string; extra?: string }) => (
+    <p className="flex items-center gap-1.5 font-sans text-xs text-text-muted">
+      {colorOf(id) && (
+        <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: colorOf(id)! }} />
+      )}
+      {extra ? `${extra} · ` : ""}
+      {nameOf(id)}
+    </p>
+  );
 
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const twoWeeksAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
@@ -203,7 +214,7 @@ function Dashboard() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-sans text-sm font-medium text-text">{w.day_label}</p>
-                    <p className="font-sans text-xs text-text-muted">{nameOf(w.client_id)}</p>
+                    <ClientTag id={w.client_id} />
                   </div>
                   <span
                     className={`rounded-full px-2 py-0.5 font-sans text-[10px] font-semibold uppercase tracking-wider ${
@@ -229,9 +240,7 @@ function Dashboard() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-sans text-sm font-medium text-text">{e.title}</p>
-                    <p className="font-sans text-xs text-text-muted">
-                      {EVENT_LABEL[e.type] ?? "Event"} · {nameOf(e.client_id)}
-                    </p>
+                    <ClientTag id={e.client_id} extra={EVENT_LABEL[e.type] ?? "Event"} />
                   </div>
                 </li>
               ))}
@@ -252,7 +261,7 @@ function Dashboard() {
                     href={`/trainer/clients/${client.id}`}
                     className="group flex items-center gap-3 rounded-lg p-1 transition hover:bg-bg-alt/60"
                   >
-                    <Avatar name={client.full_name} url={client.avatar_url} size={34} />
+                    <Avatar name={client.full_name} url={client.avatar_url} size={34} color={client.color} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-sans text-sm font-medium text-text group-hover:text-terracotta">
                         {client.full_name || "Unnamed"}
@@ -290,6 +299,7 @@ function Dashboard() {
                 <Avatar
                   name={a.clientName}
                   url={(a.clientId && byId.get(a.clientId)?.avatar_url) || null}
+                  color={(a.clientId && byId.get(a.clientId)?.color) || null}
                   size={30}
                 />
                 <p className="min-w-0 flex-1 truncate font-sans text-sm text-text">

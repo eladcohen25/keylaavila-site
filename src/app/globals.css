@@ -25,9 +25,9 @@
    (terracotta = accent, olive = success, burgundy/blush = danger) so every
    existing component picks up the new look automatically. */
 .theme-app {
-  --color-bg: #F7F7F8;
-  --color-bg-alt: #EEEFF2;
-  --color-terracotta: #4F46E5; /* accent — indigo */
+  --color-bg: #F9F7F8;
+  --color-bg-alt: #F2EDF0;
+  --color-terracotta: #F472B6; /* accent — light pink */
   --color-burgundy: #DC2626;   /* danger */
   --color-blush: #FEE2E2;      /* danger surface */
   --color-olive: #059669;      /* success */

@@ -12,6 +12,7 @@ import ProgressPhotosPanel from "@/components/trainer/ProgressPhotosPanel";
 import Avatar from "@/components/portal/Avatar";
 import { getSupabaseBrowser } from "@/lib/supabase-browser";
 import { resolveCheckinPhotoUrls } from "@/lib/checkin-photos";
+import { CLIENT_COLORS } from "@/lib/portal/colors";
 import {
   formatDuration,
   type Profile,
@@ -202,14 +203,15 @@ function ClientDetail({ id }: { id: string }) {
         Clients
       </Link>
 
-      <div className="mb-6 flex items-center gap-4">
+      <div className="mb-6 flex items-start gap-4">
         <AvatarUploader
           clientId={id}
           name={profile.full_name}
           url={profile.avatar_url}
+          color={profile.color}
           onChange={(newUrl) => setProfile((p) => (p ? { ...p, avatar_url: newUrl } : p))}
         />
-        <div>
+        <div className="min-w-0">
           <h1 className="font-serif text-2xl font-light tracking-tight text-text">
             {profile.full_name || "Unnamed client"}
           </h1>
@@ -221,6 +223,11 @@ function ClientDetail({ id }: { id: string }) {
               Billing →
             </Link>
           </div>
+          <ColorPicker
+            clientId={id}
+            value={profile.color}
+            onChange={(c) => setProfile((p) => (p ? { ...p, color: c } : p))}
+          />
         </div>
       </div>
 
@@ -266,15 +273,68 @@ function ClientDetail({ id }: { id: string }) {
   );
 }
 
+function ColorPicker({
+  clientId,
+  value,
+  onChange,
+}: {
+  clientId: string;
+  value: string | null;
+  onChange: (color: string | null) => void;
+}) {
+  const [saving, setSaving] = useState(false);
+
+  async function pick(color: string | null) {
+    if (saving) return;
+    setSaving(true);
+    const supabase = getSupabaseBrowser();
+    const { error } = await supabase.from("profiles").update({ color }).eq("id", clientId);
+    if (!error) onChange(color);
+    setSaving(false);
+  }
+
+  return (
+    <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+      <span className="mr-1 font-sans text-[11px] font-medium uppercase tracking-wider text-text-muted">
+        Color
+      </span>
+      {CLIENT_COLORS.map((c) => (
+        <button
+          key={c.hex}
+          onClick={() => pick(c.hex)}
+          disabled={saving}
+          title={c.name}
+          aria-label={`Set color ${c.name}`}
+          className={`h-5 w-5 rounded-full transition hover:scale-110 disabled:opacity-50 ${
+            value === c.hex ? "ring-2 ring-text ring-offset-1" : ""
+          }`}
+          style={{ backgroundColor: c.hex }}
+        />
+      ))}
+      {value && (
+        <button
+          onClick={() => pick(null)}
+          disabled={saving}
+          className="ml-1 font-sans text-[11px] text-text-muted hover:text-burgundy"
+        >
+          Clear
+        </button>
+      )}
+    </div>
+  );
+}
+
 function AvatarUploader({
   clientId,
   name,
   url,
+  color,
   onChange,
 }: {
   clientId: string;
   name: string | null;
   url: string | null;
+  color?: string | null;
   onChange: (url: string | null) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -337,7 +397,7 @@ function AvatarUploader({
         className="group relative rounded-full transition disabled:opacity-60"
         title="Change profile picture"
       >
-        <Avatar name={name} url={url} size={72} />
+        <Avatar name={name} url={url} size={72} color={color} />
         <span className="absolute inset-0 flex items-center justify-center rounded-full bg-text/40 text-white opacity-0 transition group-hover:opacity-100">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
