@@ -55,28 +55,21 @@ export async function POST(request: Request) {
       }
     }
 
-    let photoFrontUrl: string | null = null;
-    let photoBackUrl: string | null = null;
+    // Store the durable storage *path* in the DB (signed URLs expire after a
+    // week); the fresh signed URL is only used in the notification email.
+    let frontEmailUrl: string | null = null;
+    let backEmailUrl: string | null = null;
 
     if (front) {
-      photoFrontUrl = await uploadCheckInPhoto(
-        front,
-        data.client_name,
-        data.week_of,
-        "front"
-      );
+      const up = await uploadCheckInPhoto(front, data.client_name, data.week_of, "front");
+      data.photo_front_url = up.path;
+      frontEmailUrl = up.signedUrl;
     }
     if (back) {
-      photoBackUrl = await uploadCheckInPhoto(
-        back,
-        data.client_name,
-        data.week_of,
-        "back"
-      );
+      const up = await uploadCheckInPhoto(back, data.client_name, data.week_of, "back");
+      data.photo_back_url = up.path;
+      backEmailUrl = up.signedUrl;
     }
-
-    data.photo_front_url = photoFrontUrl;
-    data.photo_back_url = photoBackUrl;
 
     const clientId = form.get("client_id");
     const insertData: Record<string, unknown> = { ...data };
@@ -96,7 +89,7 @@ export async function POST(request: Request) {
     }
 
     try {
-      await sendCheckInEmail(data, photoFrontUrl, photoBackUrl);
+      await sendCheckInEmail(data, frontEmailUrl, backEmailUrl);
     } catch (emailErr) {
       console.error("[checkin] Email failed (row saved):", emailErr);
       // Row is saved — don't fail the client submission for email issues

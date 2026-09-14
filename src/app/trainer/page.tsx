@@ -22,8 +22,14 @@ function fmtDate(iso: string | null): string {
   });
 }
 
+interface Stats {
+  workoutsThisWeek: number;
+  checkinsThisWeek: number;
+}
+
 function ClientList() {
   const [clients, setClients] = useState<ClientRow[]>([]);
+  const [stats, setStats] = useState<Stats>({ workoutsThisWeek: 0, checkinsThisWeek: 0 });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const router = useRouter();
@@ -45,7 +51,7 @@ function ClientList() {
             .order("created_at", { ascending: false }),
           supabase
             .from("checkins")
-            .select("client_name, created_at")
+            .select("client_id, client_name, created_at")
             .order("created_at", { ascending: false }),
         ]);
 
@@ -54,19 +60,35 @@ function ClientList() {
       for (const s of (sessions as { client_id: string; created_at: string }[]) ?? []) {
         if (!lastWorkout.has(s.client_id)) lastWorkout.set(s.client_id, s.created_at);
       }
-      // latest check-in per lowercased client_name (check-ins link by name)
-      const lastCheckin = new Map<string, string>();
-      for (const c of (checkins as { client_name: string; created_at: string }[]) ?? []) {
+      // latest check-in per client — prefer the direct client_id link, fall
+      // back to name matching for legacy submissions.
+      const lastCheckinById = new Map<string, string>();
+      const lastCheckinByName = new Map<string, string>();
+      for (const c of (checkins as { client_id: string | null; client_name: string; created_at: string }[]) ?? []) {
+        if (c.client_id && !lastCheckinById.has(c.client_id)) lastCheckinById.set(c.client_id, c.created_at);
         const key = (c.client_name ?? "").trim().toLowerCase();
-        if (key && !lastCheckin.has(key)) lastCheckin.set(key, c.created_at);
+        if (key && !lastCheckinByName.has(key)) lastCheckinByName.set(key, c.created_at);
       }
 
       const rows: ClientRow[] = ((profiles as Profile[]) ?? []).map((p) => ({
         ...p,
         last_workout: lastWorkout.get(p.id) ?? null,
-        last_checkin: lastCheckin.get((p.full_name ?? "").trim().toLowerCase()) ?? null,
+        last_checkin:
+          lastCheckinById.get(p.id) ??
+          lastCheckinByName.get((p.full_name ?? "").trim().toLowerCase()) ??
+          null,
       }));
       setClients(rows);
+
+      const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      setStats({
+        workoutsThisWeek: ((sessions as { created_at: string }[]) ?? []).filter(
+          (s) => new Date(s.created_at).getTime() >= weekAgo
+        ).length,
+        checkinsThisWeek: ((checkins as { created_at: string }[]) ?? []).filter(
+          (c) => new Date(c.created_at).getTime() >= weekAgo
+        ).length,
+      });
       setLoading(false);
     })();
   }, []);
@@ -77,15 +99,12 @@ function ClientList() {
       (c.email ?? "").toLowerCase().includes(search.toLowerCase())
   );
 
+  const activeCount = clients.filter((c) => c.onboarding_complete).length;
+
   return (
     <>
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-serif text-2xl font-light tracking-tight text-text">Clients</h1>
-          <p className="mt-1 font-sans text-sm text-text-muted">
-            {clients.length} total
-          </p>
-        </div>
+        <h1 className="font-serif text-2xl font-light tracking-tight text-text">Clients</h1>
         <input
           type="text"
           placeholder="Search clients…"
@@ -94,6 +113,14 @@ function ClientList() {
           className="w-full max-w-xs rounded-lg border border-border bg-white px-4 py-2.5 font-sans text-sm text-text outline-none transition focus:border-terracotta focus:ring-1 focus:ring-terracotta/30"
         />
       </div>
+
+      {!loading && (
+        <div className="mb-6 grid grid-cols-3 gap-3">
+          <StatCard label="Active clients" value={activeCount} sub={`${clients.length} total`} />
+          <StatCard label="Workouts · last 7 days" value={stats.workoutsThisWeek} />
+          <StatCard label="Check-ins · last 7 days" value={stats.checkinsThisWeek} />
+        </div>
+      )}
 
       {loading ? (
         <Spinner />
@@ -148,6 +175,18 @@ function ClientList() {
         </div>
       )}
     </>
+  );
+}
+
+function StatCard({ label, value, sub }: { label: string; value: number; sub?: string }) {
+  return (
+    <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
+      <p className="font-sans text-[11px] font-medium uppercase tracking-wider text-text-muted">{label}</p>
+      <p className="mt-1 font-serif text-2xl font-light text-text">
+        {value}
+        {sub && <span className="ml-2 font-sans text-xs font-normal text-text-muted">{sub}</span>}
+      </p>
+    </div>
   );
 }
 

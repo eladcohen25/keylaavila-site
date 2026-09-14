@@ -16,12 +16,19 @@ function extFromMime(mime: string): string {
   return map[mime] ?? "jpg";
 }
 
+export interface UploadedCheckInPhoto {
+  /** Durable storage path — store this in the database. */
+  path: string;
+  /** Short-lived signed URL — use for the notification email only. */
+  signedUrl: string;
+}
+
 export async function uploadCheckInPhoto(
   file: File,
   clientName: string,
   weekOf: string,
   side: "front" | "back"
-): Promise<string> {
+): Promise<UploadedCheckInPhoto> {
   const supabase = getSupabaseAdmin();
   const slug = clientSlug(clientName);
   const ext = extFromMime(file.type || "image/jpeg");
@@ -48,5 +55,5 @@ export async function uploadCheckInPhoto(
     throw new Error(`Signed URL failed (${side}): ${signError?.message}`);
   }
 
-  return data.signedUrl;
+  return { path, signedUrl: data.signedUrl };
 }

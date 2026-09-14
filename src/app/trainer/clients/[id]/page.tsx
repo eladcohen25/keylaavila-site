@@ -8,8 +8,10 @@ import TrainerLayout from "@/components/trainer/TrainerLayout";
 import AssignPanel from "@/components/trainer/AssignPanel";
 import NutritionEditor from "@/components/trainer/NutritionEditor";
 import AttachmentsPanel from "@/components/trainer/AttachmentsPanel";
+import ProgressPhotosPanel from "@/components/trainer/ProgressPhotosPanel";
 import Avatar from "@/components/portal/Avatar";
 import { getSupabaseBrowser } from "@/lib/supabase-browser";
+import { resolveCheckinPhotoUrls } from "@/lib/checkin-photos";
 import {
   formatDuration,
   type Profile,
@@ -56,14 +58,14 @@ interface Session {
   set_logs: SetLog[];
 }
 
-type Tab = "overview" | "assign" | "nutrition" | "attachments" | "checkins" | "workouts";
+type Tab = "overview" | "assign" | "nutrition" | "attachments" | "checkins" | "photos" | "workouts";
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-const TAB_IDS: Tab[] = ["overview", "assign", "nutrition", "attachments", "checkins", "workouts"];
+const TAB_IDS: Tab[] = ["overview", "assign", "nutrition", "attachments", "checkins", "photos", "workouts"];
 
 function ClientDetail({ id }: { id: string }) {
   const router = useRouter();
@@ -73,11 +75,19 @@ function ClientDetail({ id }: { id: string }) {
   const [intake, setIntake] = useState<HealthIntake | null>(null);
   const [waiver, setWaiver] = useState<LiabilityWaiver | null>(null);
   const [checkins, setCheckins] = useState<CheckIn[]>([]);
+  const [photoUrls, setPhotoUrls] = useState<Map<string, string>>(new Map());
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<Tab>(
+  const [tab, setTabState] = useState<Tab>(
     initialTab && TAB_IDS.includes(initialTab as Tab) ? (initialTab as Tab) : "overview"
   );
+
+  // Keep the active tab in the URL so refresh / back / shared links land on it.
+  function setTab(next: Tab) {
+    setTabState(next);
+    const url = next === "overview" ? `/trainer/clients/${id}` : `/trainer/clients/${id}?tab=${next}`;
+    window.history.replaceState(window.history.state, "", url);
+  }
 
   useEffect(() => {
     (async () => {
@@ -94,43 +104,57 @@ function ClientDetail({ id }: { id: string }) {
       setProfile(prof as Profile);
       const fullName = (prof as Profile).full_name ?? "";
 
-      const [{ data: hi }, { data: lw }, { data: ci }, { data: ws }] = await Promise.all([
-        supabase
-          .from("health_intake")
-          .select("*")
-          .eq("client_id", id)
-          .order("submitted_at", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-        supabase
-          .from("liability_waivers")
-          .select("*")
-          .eq("client_id", id)
-          .order("signed_at", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-        fullName
-          ? supabase
-              .from("checkins")
-              .select("*")
-              .ilike("client_name", fullName)
-              .order("created_at", { ascending: false })
-          : Promise.resolve({ data: [] }),
-        supabase
-          .from("workout_sessions")
-          .select(
-            "*, assigned_workout:assigned_workouts(day_label), set_logs(*, assigned_exercise:assigned_exercises(exercise:exercises(name)))"
-          )
-          .eq("client_id", id)
-          .eq("submitted", true)
-          .order("created_at", { ascending: false }),
-      ]);
+      const [{ data: hi }, { data: lw }, { data: ciById }, { data: ciByName }, { data: ws }] =
+        await Promise.all([
+          supabase
+            .from("health_intake")
+            .select("*")
+            .eq("client_id", id)
+            .order("submitted_at", { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+          supabase
+            .from("liability_waivers")
+            .select("*")
+            .eq("client_id", id)
+            .order("signed_at", { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+          // Check-ins linked directly to this client…
+          supabase.from("checkins").select("*").eq("client_id", id),
+          // …plus older submissions matched by typed name (legacy rows).
+          fullName
+            ? supabase.from("checkins").select("*").ilike("client_name", fullName)
+            : Promise.resolve({ data: [] }),
+          supabase
+            .from("workout_sessions")
+            .select(
+              "*, assigned_workout:assigned_workouts(day_label), set_logs(*, assigned_exercise:assigned_exercises(exercise:exercises(name)))"
+            )
+            .eq("client_id", id)
+            .eq("submitted", true)
+            .order("created_at", { ascending: false }),
+        ]);
+
+      // Merge + dedupe check-ins, newest first.
+      const seen = new Set<string>();
+      const mergedCheckins = [...((ciById as CheckIn[]) ?? []), ...((ciByName as CheckIn[]) ?? [])]
+        .filter((c) => (seen.has(c.id) ? false : (seen.add(c.id), true)))
+        .sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
 
       setIntake((hi as HealthIntake) ?? null);
       setWaiver((lw as LiabilityWaiver) ?? null);
-      setCheckins((ci as CheckIn[]) ?? []);
+      setCheckins(mergedCheckins);
       setSessions((ws as Session[]) ?? []);
       setLoading(false);
+
+      // Photos are stored as paths (or legacy expiring signed URLs) in a private
+      // bucket — resolve them into fresh signed URLs for viewing.
+      const urls = await resolveCheckinPhotoUrls(
+        supabase,
+        mergedCheckins.flatMap((c) => [c.photo_front_url, c.photo_back_url])
+      );
+      setPhotoUrls(urls);
     })();
   }, [id, router]);
 
@@ -155,12 +179,14 @@ function ClientDetail({ id }: { id: string }) {
 
   if (loading || !profile) return <Spinner />;
 
+  const photoCount = checkins.filter((c) => c.photo_front_url || c.photo_back_url).length;
   const tabs: { id: Tab; label: string }[] = [
     { id: "overview", label: "Overview" },
     { id: "assign", label: "Assign" },
     { id: "nutrition", label: "Nutrition" },
     { id: "attachments", label: "Attachments" },
     { id: "checkins", label: `Check-ins${checkins.length ? ` (${checkins.length})` : ""}` },
+    { id: "photos", label: `Photos${photoCount ? ` (${photoCount})` : ""}` },
     { id: "workouts", label: `Workouts${sessions.length ? ` (${sessions.length})` : ""}` },
   ];
 
@@ -219,7 +245,8 @@ function ClientDetail({ id }: { id: string }) {
       {tab === "assign" && <AssignPanel clientId={id} />}
       {tab === "nutrition" && <NutritionEditor clientId={id} />}
       {tab === "attachments" && <AttachmentsPanel clientId={id} waiver={waiver} />}
-      {tab === "checkins" && <CheckIns checkins={checkins} />}
+      {tab === "checkins" && <CheckIns checkins={checkins} photoUrls={photoUrls} />}
+      {tab === "photos" && <ProgressPhotosPanel checkins={checkins} photoUrls={photoUrls} />}
       {tab === "workouts" && <Workouts sessions={sessions} onReopen={reopenSession} />}
     </>
   );
@@ -459,16 +486,15 @@ function Overview({
   );
 }
 
-function CheckIns({ checkins }: { checkins: CheckIn[] }) {
+function CheckIns({ checkins, photoUrls }: { checkins: CheckIn[]; photoUrls: Map<string, string> }) {
   if (checkins.length === 0) {
     return (
       <Card className="text-center">
-        <p className="font-sans text-sm text-text-muted">
-          No check-ins found. (Check-ins are matched to this client by name.)
-        </p>
+        <p className="font-sans text-sm text-text-muted">No check-ins yet.</p>
       </Card>
     );
   }
+  const resolve = (v: string | null) => (v ? photoUrls.get(v) ?? null : null);
   return (
     <div className="space-y-4">
       {checkins.map((c) => (
@@ -503,10 +529,10 @@ function CheckIns({ checkins }: { checkins: CheckIn[] }) {
               )}
             </div>
           )}
-          {(c.photo_front_url || c.photo_back_url) && (
+          {(resolve(c.photo_front_url) || resolve(c.photo_back_url)) && (
             <div className="mt-3 flex gap-3">
-              {c.photo_front_url && <Photo url={c.photo_front_url} label="Front" />}
-              {c.photo_back_url && <Photo url={c.photo_back_url} label="Back" />}
+              {resolve(c.photo_front_url) && <Photo url={resolve(c.photo_front_url)!} label="Front" />}
+              {resolve(c.photo_back_url) && <Photo url={resolve(c.photo_back_url)!} label="Back" />}
             </div>
           )}
         </Card>

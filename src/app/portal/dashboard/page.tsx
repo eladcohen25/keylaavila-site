@@ -136,7 +136,11 @@ function DashboardInner() {
           Quick links
         </h2>
         <div className="grid gap-3 sm:grid-cols-3">
-          <QuickLink href="/checkin" title="Weekly Check-In" desc="Log your week & progress photos" />
+          <QuickLink
+            href={profile ? `/checkin/${profile.id}` : "/checkin"}
+            title="Weekly Check-In"
+            desc="Log your week & progress photos"
+          />
           <QuickLink href="/portal/nutrition" title="Nutrition" desc="Your meal plan & macros" />
           <QuickLink href="/portal/profile" title="Profile" desc="History & your info" />
         </div>

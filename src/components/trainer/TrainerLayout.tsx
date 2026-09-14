@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "@/hooks/useSession";
@@ -22,6 +22,12 @@ export default function TrainerLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const loading = sessionLoading || profileLoading;
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // Close the mobile menu on navigation.
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     if (loading) return;
@@ -52,7 +58,8 @@ export default function TrainerLayout({ children }: { children: ReactNode }) {
               Trainer
             </span>
           </div>
-          <nav className="flex items-center gap-6">
+          {/* Desktop nav */}
+          <nav className="hidden items-center gap-6 md:flex">
             {NAV.map((item) => (
               <Link
                 key={item.href}
@@ -74,7 +81,57 @@ export default function TrainerLayout({ children }: { children: ReactNode }) {
               Sign Out
             </button>
           </nav>
+
+          {/* Mobile menu button */}
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            className="rounded-lg p-2 text-text-muted transition hover:bg-bg-alt hover:text-text md:hidden"
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              {menuOpen ? (
+                <>
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </>
+              ) : (
+                <>
+                  <line x1="3" y1="6" x2="21" y2="6" />
+                  <line x1="3" y1="12" x2="21" y2="12" />
+                  <line x1="3" y1="18" x2="21" y2="18" />
+                </>
+              )}
+            </svg>
+          </button>
         </div>
+
+        {/* Mobile nav panel */}
+        {menuOpen && (
+          <nav className="border-t border-border bg-bg px-5 py-3 md:hidden">
+            {NAV.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`block rounded-lg px-3 py-2.5 font-sans text-sm transition ${
+                  item.match(pathname)
+                    ? "bg-terracotta/10 font-medium text-terracotta"
+                    : "text-text-muted hover:bg-bg-alt hover:text-text"
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+            <button
+              onClick={async () => {
+                await signOut();
+                router.replace("/portal/login");
+              }}
+              className="mt-1 block w-full rounded-lg px-3 py-2.5 text-left font-sans text-sm text-text-muted transition hover:bg-bg-alt hover:text-terracotta"
+            >
+              Sign Out
+            </button>
+          </nav>
+        )}
       </header>
       <main className="mx-auto max-w-6xl px-5 py-8">{children}</main>
     </div>
